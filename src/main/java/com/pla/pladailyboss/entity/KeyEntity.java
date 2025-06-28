@@ -5,6 +5,9 @@ import com.pla.pladailyboss.enums.KeyEntityState;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -19,6 +22,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,11 +36,26 @@ public class KeyEntity extends Mob {
     private KeyEntityState state = KeyEntityState.NORMAL;
     private long updatedStateTime = 0L;
     private final long rechargeCooldown = 86400000L;
+    private Double targetY = null;
+    private double verticalSpeed = 0.1;
     private static final Logger LOGGER = LogManager.getLogger();
+
+    private static final EntityDataAccessor<Integer> DATA_STATE =
+            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Long> UPDATED_STATE_TIME =
+            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
+
+    @Override
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(DATA_STATE, KeyEntityState.NORMAL.ordinal());
+        this.entityData.define(UPDATED_STATE_TIME, 0L);
+    }
 
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
+        this.setBoundingBox(new AABB(getX(), getY(), getZ(), getX(), getY(), getZ()));
     }
 
     public void updateDataToManager() {
@@ -126,7 +145,9 @@ public class KeyEntity extends Mob {
             EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
 
             if (type != null && type.create(level()) instanceof Mob mob) {
-                mob.setPos(this.getX(), this.getY(), this.getZ());
+                double offsetX = (random.nextDouble() - 0.5) * 1.5;
+                double offsetZ = (random.nextDouble() - 0.5) * 1.5;
+                mob.setPos(this.getX() + offsetX, this.getY(), this.getZ() + offsetZ);
                 mob.setPersistenceRequired();
                 level().addFreshEntity(mob);
                 level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
@@ -141,23 +162,40 @@ public class KeyEntity extends Mob {
     }
 
     public KeyEntityState getState() {
+        if (level().isClientSide) {
+            return KeyEntityState.values()[this.entityData.get(DATA_STATE)];
+        }
         return this.state;
     }
 
+    public Long getUpdatedStateTime() {
+        if (level().isClientSide) {
+            return this.entityData.get(UPDATED_STATE_TIME);
+        }
+        return this.updatedStateTime;
+    }
+
+    public Long getRechargeCooldown() {
+        return this.rechargeCooldown;
+    }
+
     public void setState(KeyEntityState newState) {
+        this.state = newState;
+        this.entityData.set(DATA_STATE, newState.ordinal());
+
         if (newState == KeyEntityState.DISAPPEARED) {
             this.setInvisible(true);
             this.setSilent(true);
             this.noPhysics = true;
+            this.updatedStateTime = System.currentTimeMillis();
+            this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+            this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
         } else {
             this.setInvisible(false);
             this.setSilent(false);
             this.noPhysics = false;
+            this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
         }
-
-        this.state = newState;
-        this.updatedStateTime = System.currentTimeMillis();
-
         if (!this.level().isClientSide) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
                     this.getX(), this.getY() + 1.0, this.getZ(),
@@ -178,10 +216,14 @@ public class KeyEntity extends Mob {
                 this.summonedMobId = data.mobUUID();
                 this.state = data.state();
                 this.updatedStateTime = data.updatedTime();
+                this.entityData.set(DATA_STATE, this.state.ordinal());
+                this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+                if (this.state == KeyEntityState.DISAPPEARED) {
+                    this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
+                }
             }
         }
     }
-
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
@@ -214,7 +256,7 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    protected void doPush(Entity other) {
+    protected void doPush(@NotNull Entity other) {
     }
 
     @Override
@@ -223,7 +265,7 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public void remove(RemovalReason reason) {
+    public void remove(@NotNull RemovalReason reason) {
         if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
             return;
         }
@@ -231,6 +273,26 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public void die(DamageSource cause) {
+    public void die(@NotNull DamageSource cause) {
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return false;
+    }
+
+    @Override
+    public @NotNull AABB getBoundingBoxForCulling() {
+        return new AABB(getX(), getY(), getZ(), getX(), getY(), getZ());
+    }
+
+    @Override
+    public boolean canBeSeenAsEnemy() {
+        return false;
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
     }
 }
