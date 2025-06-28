@@ -103,7 +103,7 @@ public class KeyEntity extends Mob {
                 if (entity instanceof Mob mob) {
                     double distance = this.distanceToSqr(mob);
                     if (distance > 30 * 30) {
-                        mob.teleportTo(this.getX(), this.getY(), this.getZ());
+                        mob.teleportTo(this.getX(), this.getY() + 2.5, this.getZ());
                     }
 
                     long now = System.currentTimeMillis();
