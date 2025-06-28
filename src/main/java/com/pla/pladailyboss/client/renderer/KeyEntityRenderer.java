@@ -10,12 +10,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LightLayer;
 import org.jetbrains.annotations.NotNull;
 
 public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<KeyEntity>> {
@@ -37,11 +35,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
 
         Level level = pEntity.level();
-
-        BlockPos pos = pEntity.getOnPos().above();
-
         int packedLight = LightTexture.pack(15, 15);
-
         double relativeGameTime = level.getGameTime() + pPartialTicks;
         double offset = Math.sin(relativeGameTime / 10.0) / 20.0;
 

@@ -1,8 +1,14 @@
 package com.pla.pladailyboss.entity;
 
+import com.pla.pladailyboss.data.KeyEntityManager;
+import com.pla.pladailyboss.enums.KeyEntityState;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -13,13 +19,31 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.UUID;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 
 
 public class KeyEntity extends Mob {
+    private UUID summonedMobId = null;
+    private KeyEntityState state = KeyEntityState.NORMAL;
+    private long updatedStateTime = 0L;
+    private final long rechargeCooldown = 86400000L;
+    private static final Logger LOGGER = LogManager.getLogger();
+
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
+    }
+
+    public void updateDataToManager() {
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            KeyEntityManager manager = KeyEntityManager.get(serverLevel);
+            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime);
+        }
     }
 
     @Override
@@ -30,16 +54,134 @@ public class KeyEntity extends Mob {
         if (player != null) {
             this.lookAt(EntityAnchorArgument.Anchor.EYES, player.position());
         }
+
+        if (!level().isClientSide) {
+            if (state == KeyEntityState.DISAPPEARED && !this.isInvisible()) {
+                this.setInvisible(true);
+                this.setSilent(true);
+                this.noPhysics = true;
+            }
+
+            if (state == KeyEntityState.DISABLED) {
+                long now = System.currentTimeMillis();
+                if (now - updatedStateTime >= this.rechargeCooldown) {
+                    state = KeyEntityState.NORMAL;
+                    updatedStateTime = System.currentTimeMillis();
+                }
+                return;
+            }
+
+            ((ServerLevel) level()).sendParticles(ParticleTypes.ENCHANT,
+                    this.getX(), this.getY() + 3.5, this.getZ(),
+                    2,
+                    0.2, 0.2, 0.2,
+                    0.0
+            );
+
+            if (summonedMobId != null) {
+                Entity entity = ((ServerLevel) level()).getEntity(summonedMobId);
+
+                if (entity instanceof Mob mob) {
+                    double distance = this.distanceToSqr(mob);
+                    if (distance > 30 * 30) {
+                        mob.teleportTo(this.getX(), this.getY(), this.getZ());
+                    }
+
+                    long now = System.currentTimeMillis();
+                    if (now - updatedStateTime >= rechargeCooldown) {
+                        mob.discard();
+                        summonedMobId = null;
+                        setState(KeyEntityState.NORMAL);
+                    }
+
+                } else {
+                    summonedMobId = null;
+                    setState(KeyEntityState.DISABLED);
+                }
+            }
+        }
     }
 
     @Override
     protected @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         if (!level().isClientSide && hand == InteractionHand.MAIN_HAND) {
-            player.sendSystemMessage(Component.literal("Hello!"));
-            return InteractionResult.SUCCESS;
+            if (state == KeyEntityState.DISABLED) {
+                long remaining = this.rechargeCooldown - (System.currentTimeMillis() - updatedStateTime);
+                long seconds = (remaining / 1000) % 60;
+                long minutes = (remaining / (1000 * 60)) % 60;
+                long hours = remaining / (1000 * 60 * 60);
+                player.displayClientMessage(
+                        Component.literal("Come back after " + hours + "h " + minutes + "m " + seconds + "s")
+                                .withStyle(style -> style.withColor(0xFFFF00)),
+                        true
+                );
+                return InteractionResult.PASS;
+            }
+
+            if (state == KeyEntityState.DISAPPEARED) {
+                return InteractionResult.PASS;
+            }
+
+            ResourceLocation mobId = new ResourceLocation("minecraft", "zombie");
+            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
+
+            if (type != null && type.create(level()) instanceof Mob mob) {
+                mob.setPos(this.getX(), this.getY(), this.getZ());
+                mob.setPersistenceRequired();
+                level().addFreshEntity(mob);
+                level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+
+                summonedMobId = mob.getUUID();
+                setState(KeyEntityState.DISAPPEARED);
+                return InteractionResult.SUCCESS;
+            }
         }
+
         return super.mobInteract(player, hand);
     }
+
+    public KeyEntityState getState() {
+        return this.state;
+    }
+
+    public void setState(KeyEntityState newState) {
+        if (newState == KeyEntityState.DISAPPEARED) {
+            this.setInvisible(true);
+            this.setSilent(true);
+            this.noPhysics = true;
+        } else {
+            this.setInvisible(false);
+            this.setSilent(false);
+            this.noPhysics = false;
+        }
+
+        this.state = newState;
+        this.updatedStateTime = System.currentTimeMillis();
+
+        if (!this.level().isClientSide) {
+            ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
+                    this.getX(), this.getY() + 1.0, this.getZ(),
+                    20, 0.3, 0.3, 0.3, 0.01);
+            this.updateDataToManager();
+        }
+    }
+
+    @Override
+    public void onAddedToWorld() {
+        super.onAddedToWorld();
+
+        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+            KeyEntityManager manager = KeyEntityManager.get(serverLevel);
+            KeyEntityManager.KeyEntityData data = manager.get(this.getUUID());
+
+            if (data != null) {
+                this.summonedMobId = data.mobUUID();
+                this.state = data.state();
+                this.updatedStateTime = data.updatedTime();
+            }
+        }
+    }
+
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
@@ -75,13 +217,20 @@ public class KeyEntity extends Mob {
     protected void doPush(Entity other) {
     }
 
-//    @Override
-//    public boolean isPickable() {
-//        return false;
-//    }
-//
-//    @Override
-//    public boolean canBeCollidedWith() {
-//        return false;
-//    }
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return false;
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
+            return;
+        }
+        super.remove(reason);
+    }
+
+    @Override
+    public void die(DamageSource cause) {
+    }
 }
