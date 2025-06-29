@@ -18,21 +18,20 @@ import java.util.function.Supplier;
 public class BlockInit {
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, PlaDailyBoss.MOD_ID);
 
-    public static final RegistryObject<SpinningBlock> SPINNING_BLOCK = registerBlock("spinning_block",
+    public static final RegistryObject<SpinningBlock> SPINNING_BLOCK = registerBlock(
             () -> new SpinningBlock(BlockBehaviour.Properties
                     .copy(Blocks.BEDROCK)
                     .lightLevel(state -> 15)
-                    .noOcclusion()
-                    .sound(SoundType.AMETHYST).noOcclusion()));
+                    .sound(SoundType.AMETHYST)));
 
-    private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {
-        RegistryObject<T> toReturn = BLOCKS.register(name, block);
-        registerBlockItem(name, toReturn);
+    private static <T extends Block> RegistryObject<T> registerBlock(Supplier<T> block) {
+        RegistryObject<T> toReturn = BLOCKS.register("spinning_block", block);
+        registerBlockItem(toReturn);
         return toReturn;
     }
 
-    private static <T extends Block> void registerBlockItem(String name, RegistryObject<T> block) {
-        ItemInit.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
+    private static <T extends Block> void registerBlockItem(RegistryObject<T> block) {
+        ItemInit.ITEMS.register("spinning_block", () -> new BlockItem(block.get(), new Item.Properties()));
     }
 
     public static void register(IEventBus eventBus) {

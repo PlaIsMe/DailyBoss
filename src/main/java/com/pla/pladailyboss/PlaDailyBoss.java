@@ -2,11 +2,14 @@ package com.pla.pladailyboss;
 
 import com.mojang.logging.LogUtils;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
+import com.pla.pladailyboss.data.DailyBossLoader;
+import com.pla.pladailyboss.data.DailyBossReloadListener;
 import com.pla.pladailyboss.init.BlockInit;
 import com.pla.pladailyboss.init.EntityInit;
 import com.pla.pladailyboss.init.ItemInit;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -28,13 +31,10 @@ public class PlaDailyBoss
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         EntityInit.ENTITY_TYPES.register(modEventBus);
-//        ModItem.register(modEventBus);
         BlockInit.BLOCKS.register(modEventBus);
         ItemInit.ITEMS.register(modEventBus);
-//        ModBlock.register(modEventBus);
-
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "plasummonblock-common.toml");
-        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(new DailyBossReloadListener());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
