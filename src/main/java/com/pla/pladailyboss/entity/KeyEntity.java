@@ -4,6 +4,7 @@ import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.KeyEntityManager;
 import com.pla.pladailyboss.enums.KeyEntityState;
+import com.pla.pladailyboss.event.RewardEvent;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -22,22 +23,22 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 
 public class KeyEntity extends Mob {
     private UUID summonedMobId = null;
+    private String summonedMobRL = "";
     private KeyEntityState state = KeyEntityState.NORMAL;
     private long updatedStateTime = 0L;
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
@@ -49,24 +50,28 @@ public class KeyEntity extends Mob {
             SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Long> UPDATED_STATE_TIME =
             SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Long> RECHARGE_COOLDOWN =
+            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
 
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_STATE, KeyEntityState.NORMAL.ordinal());
         this.entityData.define(UPDATED_STATE_TIME, 0L);
+        this.entityData.define(RECHARGE_COOLDOWN, 0L);
     }
 
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
         this.setBoundingBox(new AABB(getX(), getY(), getZ(), getX(), getY(), getZ()));
+        this.entityData.set(RECHARGE_COOLDOWN, this.rechargeCooldown);
     }
 
     public void updateDataToManager() {
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
-            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.isUnderground);
+            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.isUnderground, this.summonedMobRL);
         }
     }
 
@@ -84,6 +89,16 @@ public class KeyEntity extends Mob {
                 this.setInvisible(true);
                 this.setSilent(true);
                 this.noPhysics = true;
+            }
+
+            if (this.state == KeyEntityState.DISAPPEARED && !this.isUnderground) {
+                this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
+                this.isUnderground = true;
+                this.updateDataToManager();
+            } else if (this.state != KeyEntityState.DISABLED && this.isUnderground) {
+                this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
+                this.isUnderground = false;
+                this.updateDataToManager();
             }
 
             if (state == KeyEntityState.DISABLED) {
@@ -118,8 +133,33 @@ public class KeyEntity extends Mob {
                     }
 
                 } else {
+                    // The key move up first then throw reward
+                    String tempSummonedMobRL = summonedMobRL;
+
+                    summonedMobRL = "";
                     summonedMobId = null;
                     setState(KeyEntityState.DISABLED);
+
+                    List<String> lootTables = DailyBossLoader.BOSS_LOOT_TABLES.getOrDefault(tempSummonedMobRL, Collections.emptyList());
+                    for (int i = 0; i < 5; i++) {
+                        String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
+                        RewardEvent.dropLoot(
+                            (ServerLevel) level(),
+                            new ResourceLocation(lootTableId),
+                            this.getOnPos(),
+                            1
+                        );
+                    }
+                    int xpAmount = 1395;
+                    level().addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
+                        level(),
+                        this.getOnPos().getX() + 0.5,
+                        this.getOnPos().getY() + 1,
+                        this.getOnPos().getZ() + 0.5,
+                        xpAmount
+                    ));
+
+
                 }
             }
         }
@@ -158,7 +198,16 @@ public class KeyEntity extends Mob {
                 level().addFreshEntity(mob);
                 level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
 
+                if (mob instanceof Warden warden) {
+                    Player nearestPlayer = level().getNearestPlayer(warden, 32);
+                    if (nearestPlayer != null) {
+                        warden.setTarget(nearestPlayer);
+                        warden.setAttackTarget(nearestPlayer);
+                    }
+                }
+
                 summonedMobId = mob.getUUID();
+                summonedMobRL = selectedMobId;
                 setState(KeyEntityState.DISAPPEARED);
                 return InteractionResult.SUCCESS;
             }
@@ -182,6 +231,9 @@ public class KeyEntity extends Mob {
     }
 
     public Long getRechargeCooldown() {
+        if (level().isClientSide) {
+            return this.entityData.get(RECHARGE_COOLDOWN);
+        }
         return this.rechargeCooldown;
     }
 
@@ -227,17 +279,9 @@ public class KeyEntity extends Mob {
                 this.state = data.state();
                 this.updatedStateTime = data.updatedTime();
                 this.isUnderground = data.underGround();
+                this.summonedMobRL = data.summonedMobRL();
                 this.entityData.set(DATA_STATE, this.state.ordinal());
                 this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
-                if (this.state == KeyEntityState.DISAPPEARED && !this.isUnderground) {
-                    this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
-                    this.isUnderground = true;
-                    this.updateDataToManager();
-                } else if (this.state != KeyEntityState.DISABLED && this.isUnderground) {
-                    this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
-                    this.isUnderground = false;
-                    this.updateDataToManager();
-                }
             }
         }
     }
@@ -254,7 +298,7 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public boolean isInvulnerableTo(DamageSource source) {
+    public boolean isInvulnerableTo(@NotNull DamageSource source) {
         return true;
     }
 
