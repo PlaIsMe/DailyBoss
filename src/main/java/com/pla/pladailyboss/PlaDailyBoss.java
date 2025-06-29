@@ -33,7 +33,7 @@ public class PlaDailyBoss
         EntityInit.ENTITY_TYPES.register(modEventBus);
         BlockInit.BLOCKS.register(modEventBus);
         ItemInit.ITEMS.register(modEventBus);
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "plasummonblock-common.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "dailyboss-server.toml");
         MinecraftForge.EVENT_BUS.register(new DailyBossReloadListener());
     }
 

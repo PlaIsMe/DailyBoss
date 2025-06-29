@@ -1,5 +1,7 @@
 package com.pla.pladailyboss.entity;
 
+import com.pla.pladailyboss.config.PlaDailyBossConfig;
+import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.KeyEntityManager;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
@@ -26,6 +28,9 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -35,9 +40,9 @@ public class KeyEntity extends Mob {
     private UUID summonedMobId = null;
     private KeyEntityState state = KeyEntityState.NORMAL;
     private long updatedStateTime = 0L;
-    private final long rechargeCooldown = 10000L;
+    private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
     private boolean isUnderground = false;
-//    private final long rechargeCooldown = 86400000L;
+    private static final Random RANDOM = new Random();
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final EntityDataAccessor<Integer> DATA_STATE =
@@ -140,8 +145,10 @@ public class KeyEntity extends Mob {
                 return InteractionResult.PASS;
             }
 
-            ResourceLocation mobId = new ResourceLocation("minecraft", "zombie");
-            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
+            List<String> mobIds = new ArrayList<>(DailyBossLoader.BOSS_LOOT_TABLES.keySet());
+            String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
+            ResourceLocation mobRL = new ResourceLocation(selectedMobId);
+            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
 
             if (type != null && type.create(level()) instanceof Mob mob) {
                 double offsetX = (random.nextDouble() - 0.5) * 1.5;

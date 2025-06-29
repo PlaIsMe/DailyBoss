@@ -8,17 +8,15 @@ public class PlaDailyBossConfig {
     public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec SPEC;
 
-    public static ForgeConfigSpec.ConfigValue<Integer> TICK_RESET;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> BOSSES;
-    public static ForgeConfigSpec.ConfigValue<List<? extends String>> GATES;
+    public static ForgeConfigSpec.ConfigValue<Long> COOL_DOWN;
 
     static {
-        TICK_RESET = BUILDER.comment("Tick resetting the summon block")
-                .defineInRange("tickReset", 100, 60, 72000);
-
-        BOSSES = BUILDER.comment("A list of bosses to be spawned")
-                .defineList("bosses", List.of("minecraft:zombie", "minecraft:skeleton", "minecraft:creeper"),
-                        obj -> obj instanceof String);
+        COOL_DOWN = BUILDER.comment(
+                        "Cooldown for daily boss, in milliseconds.",
+                        "Default: 1 day",
+                        "Minimum: 10 seconds",
+                        "Maximum: 7 days")
+                .defineInRange("coolDown", 86400000L, 10000L, 604800000L);
         SPEC = BUILDER.build();
     }
 }
