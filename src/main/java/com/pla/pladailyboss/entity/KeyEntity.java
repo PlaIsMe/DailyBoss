@@ -35,9 +35,9 @@ public class KeyEntity extends Mob {
     private UUID summonedMobId = null;
     private KeyEntityState state = KeyEntityState.NORMAL;
     private long updatedStateTime = 0L;
-    private final long rechargeCooldown = 86400000L;
-    private Double targetY = null;
-    private double verticalSpeed = 0.1;
+    private final long rechargeCooldown = 10000L;
+    private boolean isUnderground = false;
+//    private final long rechargeCooldown = 86400000L;
     private static final Logger LOGGER = LogManager.getLogger();
 
     private static final EntityDataAccessor<Integer> DATA_STATE =
@@ -61,7 +61,7 @@ public class KeyEntity extends Mob {
     public void updateDataToManager() {
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
-            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime);
+            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.isUnderground);
         }
     }
 
@@ -84,8 +84,7 @@ public class KeyEntity extends Mob {
             if (state == KeyEntityState.DISABLED) {
                 long now = System.currentTimeMillis();
                 if (now - updatedStateTime >= this.rechargeCooldown) {
-                    state = KeyEntityState.NORMAL;
-                    updatedStateTime = System.currentTimeMillis();
+                    setState(KeyEntityState.NORMAL);
                 }
                 return;
             }
@@ -190,11 +189,15 @@ public class KeyEntity extends Mob {
             this.updatedStateTime = System.currentTimeMillis();
             this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
             this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
+            this.isUnderground = true;
         } else {
             this.setInvisible(false);
             this.setSilent(false);
             this.noPhysics = false;
-            this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
+            if (this.isUnderground) {
+                this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
+                this.isUnderground = false;
+            }
         }
         if (!this.level().isClientSide) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
@@ -216,10 +219,17 @@ public class KeyEntity extends Mob {
                 this.summonedMobId = data.mobUUID();
                 this.state = data.state();
                 this.updatedStateTime = data.updatedTime();
+                this.isUnderground = data.underGround();
                 this.entityData.set(DATA_STATE, this.state.ordinal());
                 this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
-                if (this.state == KeyEntityState.DISAPPEARED) {
+                if (this.state == KeyEntityState.DISAPPEARED && !this.isUnderground) {
                     this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
+                    this.isUnderground = true;
+                    this.updateDataToManager();
+                } else if (this.state != KeyEntityState.DISABLED && this.isUnderground) {
+                    this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
+                    this.isUnderground = false;
+                    this.updateDataToManager();
                 }
             }
         }

@@ -24,8 +24,8 @@ public class KeyEntityManager extends SavedData {
         );
     }
 
-    public void update(UUID keyEntityUUID, UUID mobUUID, KeyEntityState state, long updatedTime) {
-        dataMap.put(keyEntityUUID, new KeyEntityData(mobUUID, state, updatedTime));
+    public void update(UUID keyEntityUUID, UUID mobUUID, KeyEntityState state, long updatedTime, boolean underGround) {
+        dataMap.put(keyEntityUUID, new KeyEntityData(mobUUID, state, updatedTime, underGround));
         setDirty();
     }
 
@@ -47,7 +47,8 @@ public class KeyEntityManager extends SavedData {
             UUID mobUUID = entry.contains("MobUUID") ? entry.getUUID("MobUUID") : null;
             KeyEntityState state = KeyEntityState.valueOf(entry.getString("State"));
             long time = entry.getLong("UpdatedTime");
-            manager.dataMap.put(keyUUID, new KeyEntityData(mobUUID, state, time));
+            boolean underground = entry.getBoolean("Underground");
+            manager.dataMap.put(keyUUID, new KeyEntityData(mobUUID, state, time, underground));
         }
         return manager;
     }
@@ -62,11 +63,12 @@ public class KeyEntityManager extends SavedData {
                 nbt.putUUID("MobUUID", entry.getValue().mobUUID());
             nbt.putString("State", entry.getValue().state().name());
             nbt.putLong("UpdatedTime", entry.getValue().updatedTime());
+            nbt.putBoolean("Underground", entry.getValue().underGround());
             list.add(nbt);
         }
         tag.put("KeyEntities", list);
         return tag;
     }
 
-    public record KeyEntityData(UUID mobUUID, KeyEntityState state, long updatedTime) {}
+    public record KeyEntityData(UUID mobUUID, KeyEntityState state, long updatedTime, boolean underGround) {}
 }

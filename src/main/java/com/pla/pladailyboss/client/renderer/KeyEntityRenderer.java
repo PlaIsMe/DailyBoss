@@ -13,14 +13,18 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<KeyEntity>> {
     private final EntityRendererProvider.Context context;
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public KeyEntityRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new KeyEntityModel<>(pContext.bakeLayer(ModModelLayers.KEY_ENTITY_LAYER)), 0.0f);
@@ -33,9 +37,15 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
     }
 
     @Override
+    protected int getBlockLightLevel(KeyEntity pEntity, BlockPos pPos) {
+        return 15;
+    }
+
+    @Override
     public void render(@NotNull KeyEntity pEntity, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pPoseStack,
                        @NotNull MultiBufferSource pBuffer, int pPackedLight) {
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
+
         if (pEntity.getState() == KeyEntityState.NORMAL) {
             Level level = pEntity.level();
             int packedLight = LightTexture.pack(15, 15);
