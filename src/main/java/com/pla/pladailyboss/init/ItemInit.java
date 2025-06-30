@@ -11,6 +11,21 @@ public class ItemInit {
 
     public static final RegistryObject<BlockItem> SPINNING_BLOCK_ITEM = ITEMS.register("spinning_block",
             () -> new BlockItem(BlockInit.SPINNING_BLOCK.get(),
-                    new Item.Properties()
-                            .rarity(Rarity.UNCOMMON)));
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final RegistryObject<BlockItem> UNBREAKABLE_STONE_ITEM = ITEMS.register("unbreakable_stone",
+            () -> new BlockItem(BlockInit.UNBREAKABLE_STONE.get(),
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final RegistryObject<BlockItem> UNBREAKABLE_GLOWSTONE_ITEM = ITEMS.register("unbreakable_glowstone",
+            () -> new BlockItem(BlockInit.UNBREAKABLE_GLOWSTONE.get(),
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final RegistryObject<BlockItem> UNBREAKABLE_ANDESITE_ITEM = ITEMS.register("unbreakable_andesite",
+            () -> new BlockItem(BlockInit.UNBREAKABLE_ANDESITE.get(),
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static final RegistryObject<BlockItem> UNBREAKABLE_POLISHED_ANDESITE_ITEM = ITEMS.register("unbreakable_polished_andesite",
+            () -> new BlockItem(BlockInit.UNBREAKABLE_POLISHED_ANDESITE.get(),
+                    new Item.Properties().rarity(Rarity.UNCOMMON)));
 }

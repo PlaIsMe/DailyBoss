@@ -195,8 +195,6 @@ public class KeyEntity extends Mob {
             if (type != null && type.create(level()) instanceof Mob mob) {
                 BossLootData lootData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
                 if (lootData != null && lootData.nbt != null && !lootData.nbt.entrySet().isEmpty()) {
-                    LOGGER.info("[DailyBoss] Attempting to load entity NBT for mob: {}", selectedMobId);
-                    LOGGER.info("[DailyBoss] Raw NBT for {}: {}", selectedMobId, lootData.nbt);
                     CompoundTag tag = CompoundTag.CODEC.parse(JsonOps.INSTANCE, lootData.nbt)
                             .resultOrPartial(msg -> LOGGER.warn("[Daily Boss] Failed to parse NBT for mob {}: {}", selectedMobId, msg))
                             .orElse(new CompoundTag());
@@ -208,7 +206,6 @@ public class KeyEntity extends Mob {
                         });
 
                         if (loaded != null) {
-                            LOGGER.info("[DailyBoss] Loaded entity type: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
                             if (loaded instanceof Mob loadedMob) {
                                 loadedMob.setPersistenceRequired();
                                 loadedMob.setTarget(player);
