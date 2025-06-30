@@ -1,6 +1,9 @@
 package com.pla.pladailyboss.client.screen;
 
 import com.pla.pladailyboss.PlaDailyBoss;
+import com.pla.pladailyboss.data.BossEntry;
+import com.pla.pladailyboss.network.AskForDataMessage;
+import com.pla.pladailyboss.network.NetworkHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -12,10 +15,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class BossScreen extends Screen {
+    private static final Logger LOGGER = LogManager.getLogger();
+    private static BossScreen instance;
     private static final Component TITLE =
             Component.translatable("gui." + PlaDailyBoss.MOD_ID + ".boss_screen");
 
@@ -27,42 +31,9 @@ public class BossScreen extends Screen {
     private int currentPage;
     private int totalPages;
     private Button pageButton;
+    private List<BossEntry> entityIdStrings;
 
-    private static final Logger LOGGER = LogManager.getLogger();
-
-    private final List<String> entityIdStrings = Arrays.asList(
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:wither",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:warden",
-            "minecraft:abcd"
-    );
-
+    Minecraft mc = Minecraft.getInstance();
     private static final int BOX_WIDTH = 60;
     private static final int BOX_HEIGHT = 80;
     private static final int PADDING_HORIZONTAL = 10;
@@ -71,10 +42,22 @@ public class BossScreen extends Screen {
 
     public BossScreen() {
         super(TITLE);
+        instance = this;
+        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
+    }
+
+    public static BossScreen getInstance() {
+        return instance;
+    }
+
+    public void setEntityIdStrings(List<BossEntry> entityIdStrings) {
+        this.entityIdStrings = entityIdStrings;
+        init();
     }
 
     @Override
     protected void init() {
+        if (this.entityIdStrings == null) return;
         super.init();
 
         int bgLeft = width / 10;
@@ -125,11 +108,12 @@ public class BossScreen extends Screen {
         return resourceManager.getResource(location).isPresent();
     }
 
-    private void drawEntityCard(GuiGraphics guiGraphics, int x, int y, String entityId) {
-        String entityPoster = posterPath + entityId.replace(":", "/") + "/" + entityId.split(":")[1] + "_enabled.png";
+    private void drawEntityCard(GuiGraphics guiGraphics, int x, int y, BossEntry bossEntry) {
+        String prefixImage = bossEntry.defeated ? "_enabled.png" : "_disabled.png";
+        String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
         ResourceLocation entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {
-            entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + "_enabled.png");
+            entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
         }
         guiGraphics.blit(
                 entityCardTexture,
@@ -153,6 +137,8 @@ public class BossScreen extends Screen {
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
+        if (this.entityIdStrings == null) return;
+
         int maxColumns = Math.max(1, (bgWidth + PADDING_HORIZONTAL) / (BOX_WIDTH + PADDING_HORIZONTAL));
         int totalWidth = maxColumns * BOX_WIDTH + (maxColumns - 1) * PADDING_HORIZONTAL;
         int startX = bgLeft + (bgWidth - totalWidth) / 2;
@@ -166,7 +152,7 @@ public class BossScreen extends Screen {
         currentPage = Math.max(1, Math.min(currentPage, totalPages));
         int startIndex = (currentPage - 1) * entitiesPerPage;
         int endIndex = Math.min(startIndex + entitiesPerPage, entityIdStrings.size());
-        List<String> entitiesToRender = entityIdStrings.subList(startIndex, endIndex);
+        List<BossEntry> entitiesToRender = entityIdStrings.subList(startIndex, endIndex);
 
         for (int i = 0; i < entitiesToRender.size(); i++) {
             int col = i % maxColumns;
@@ -194,11 +180,5 @@ public class BossScreen extends Screen {
     }
 
     private void doNothing(Button button) {
-    }
-
-    private ResourceLocation getEntityIcon(String idStr) {
-        String[] parts = idStr.split(":");
-        String iconName = parts.length == 2 ? parts[1] : idStr;
-        return new ResourceLocation(PlaDailyBoss.MOD_ID, "textures/gui/entity_icons/test.png");
     }
 }

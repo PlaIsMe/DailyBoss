@@ -2,14 +2,13 @@ package com.pla.pladailyboss;
 
 import com.mojang.logging.LogUtils;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
-import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.DailyBossReloadListener;
 import com.pla.pladailyboss.init.BlockInit;
 import com.pla.pladailyboss.init.EntityInit;
 import com.pla.pladailyboss.init.ItemInit;
+import com.pla.pladailyboss.network.NetworkHandler;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -33,6 +32,7 @@ public class PlaDailyBoss
         EntityInit.ENTITY_TYPES.register(modEventBus);
         BlockInit.BLOCKS.register(modEventBus);
         ItemInit.ITEMS.register(modEventBus);
+        NetworkHandler.register();
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "dailyboss-server.toml");
         MinecraftForge.EVENT_BUS.register(new DailyBossReloadListener());
     }

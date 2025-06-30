@@ -107,5 +107,27 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 })
                 .collect(Collectors.toList());
     }
+
+    public static List<BossEntry> getBossEntriesForPlayer(ServerPlayer player, MinecraftServer server) {
+        return BOSS_LOOT_TABLES.keySet().stream()
+                .map(mobIdStr -> {
+                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(mobIdStr));
+                    boolean defeated = false;
+
+                    if (entityType != null) {
+                        int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
+                        defeated = inMemoryKillCount > 0;
+                    }
+
+                    if (!defeated) {
+                        int fromFile = StatsReader.getMobKillCountFromStatsFile(server, player, mobIdStr);
+                        defeated = fromFile > 0;
+                    }
+
+                    return new BossEntry(mobIdStr, defeated);
+                })
+                .collect(Collectors.toList());
+    }
+
 }
 
