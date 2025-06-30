@@ -8,7 +8,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.stats.Stats;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.apache.logging.log4j.LogManager;
@@ -19,7 +21,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DailyBossLoader extends SimpleJsonResourceReloadListener {
-    public static Map<String, List<String>> BOSS_LOOT_TABLES = new HashMap<>();
+    public static final Map<String, BossLootData> BOSS_LOOT_TABLES = new HashMap<>();
     private static final Logger LOGGER = LogManager.getLogger();
     private static final Gson GSON = new Gson();
 
@@ -70,19 +72,39 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 LOGGER.warn("[DailyBoss] Skipping '{}' because entity '{}' is not registered.", id, mobId);
                 continue;
             }
-            BOSS_LOOT_TABLES.put(mobId.toString(), lootTables);
+
+            JsonObject obj = element.getAsJsonObject();
+            JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
+
+            BOSS_LOOT_TABLES.put(mobId.toString(), new BossLootData(lootTables, nbt));
         }
 
         LOGGER.info("[DailyBoss] Loaded loot table map:");
-        BOSS_LOOT_TABLES.forEach((mob, loots) -> {
+        BOSS_LOOT_TABLES.forEach((mob, data) -> {
             LOGGER.info("Mob: {}", mob);
-            loots.forEach(loot -> LOGGER.info("  -> {}", loot));
+            data.lootTables.forEach(loot -> LOGGER.info("  -> {}", loot));
+            if (!data.nbt.entrySet().isEmpty()) {
+                LOGGER.info("  NBT: {}", data.nbt);
+            }
         });
     }
 
     public static List<String> getListBasedOnKilledMob(ServerPlayer player, MinecraftServer server) {
         return BOSS_LOOT_TABLES.keySet().stream()
-                .filter(mobId -> StatsReader.getMobKillCountFromStatsFile(server, player, mobId) > 0)
+                .filter(mobId -> {
+                    // Memory Check
+                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(mobId));
+                    if (entityType != null) {
+                        int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
+                        if (inMemoryKillCount > 0) {
+                            return true;
+                        }
+                    }
+
+                    // JSON check
+                    int fromFile = StatsReader.getMobKillCountFromStatsFile(server, player, mobId);
+                    return fromFile > 0;
+                })
                 .collect(Collectors.toList());
     }
 }

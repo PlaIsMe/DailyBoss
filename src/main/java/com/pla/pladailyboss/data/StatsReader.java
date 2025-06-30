@@ -40,6 +40,7 @@ public class StatsReader {
 
             return killCountElement.getAsInt();
 
+
         } catch (Exception e) {
             LOGGER.warn("[DailyBoss] Failed to read stats file for player {}", player.getScoreboardName(), e);
             return -1;

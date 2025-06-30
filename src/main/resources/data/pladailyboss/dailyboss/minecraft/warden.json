@@ -1,5 +1,19 @@
 {
   "loot_table": [
     "minecraft:chests/ancient_city"
-  ]
+  ],
+  "nbt": {
+    "Brain": {
+      "memories": {
+        "minecraft:dig_cooldown": {
+          "value": {},
+          "ttl": 1200
+        },
+        "minecraft:is_emerging": {
+          "value": {},
+          "ttl": 85
+        }
+      }
+    }
+  }
 }

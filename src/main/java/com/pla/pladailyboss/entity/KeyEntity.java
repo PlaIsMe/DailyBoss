@@ -1,12 +1,15 @@
 package com.pla.pladailyboss.entity;
 
+import com.mojang.serialization.JsonOps;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
+import com.pla.pladailyboss.data.BossLootData;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.KeyEntityManager;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -19,9 +22,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.warden.Warden;
@@ -43,7 +44,6 @@ public class KeyEntity extends Mob {
     private KeyEntityState state = KeyEntityState.NORMAL;
     private long updatedStateTime = 0L;
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
-    private boolean isUnderground = false;
     private static final Random RANDOM = new Random();
     private static final Logger LOGGER = LogManager.getLogger();
 
@@ -72,7 +72,7 @@ public class KeyEntity extends Mob {
     public void updateDataToManager() {
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
-            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.isUnderground, this.summonedMobRL);
+            manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.summonedMobRL);
         }
     }
 
@@ -86,21 +86,10 @@ public class KeyEntity extends Mob {
         }
 
         if (!level().isClientSide) {
-            LOGGER.info("[DailyBoss] ");
             if (state == KeyEntityState.DISAPPEARED && !this.isInvisible()) {
                 this.setInvisible(true);
                 this.setSilent(true);
                 this.noPhysics = true;
-            }
-
-            if (this.state == KeyEntityState.DISAPPEARED && !this.isUnderground) {
-                this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
-                this.isUnderground = true;
-                this.updateDataToManager();
-            } else if (this.state != KeyEntityState.DISABLED && this.isUnderground) {
-                this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
-                this.isUnderground = false;
-                this.updateDataToManager();
             }
 
             if (state == KeyEntityState.DISABLED) {
@@ -142,7 +131,8 @@ public class KeyEntity extends Mob {
                     summonedMobId = null;
                     setState(KeyEntityState.DISABLED);
 
-                    List<String> lootTables = DailyBossLoader.BOSS_LOOT_TABLES.getOrDefault(tempSummonedMobRL, Collections.emptyList());
+                    BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(tempSummonedMobRL);
+                    List<String> lootTables = data != null ? data.lootTables : Collections.emptyList();
                     for (int i = 0; i < 5; i++) {
                         String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
                         RewardEvent.dropLoot(
@@ -189,28 +179,58 @@ public class KeyEntity extends Mob {
 
             List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
             if (mobIds.isEmpty()) {
-                LOGGER.warn("[DailyBoss] Please kill boss in real life");
+                player.displayClientMessage(
+                        Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
+                                .withStyle(style -> style.withColor(0xFFFF00)),
+                        true
+                );
                 return InteractionResult.PASS;
             }
             String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
             ResourceLocation mobRL = new ResourceLocation(selectedMobId);
             EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
 
-            if (type != null && type.create(level()) instanceof Mob mob) {
-                mob.setPos(this.getX(), this.getY(), this.getZ());
-                mob.setPersistenceRequired();
-                level().addFreshEntity(mob);
-                level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+            boolean usedCustomNBT = false;
 
-                if (mob instanceof Warden warden) {
-                    Player nearestPlayer = level().getNearestPlayer(warden, 32);
-                    if (nearestPlayer != null) {
-                        warden.setTarget(nearestPlayer);
-                        warden.setAttackTarget(nearestPlayer);
+            if (type != null && type.create(level()) instanceof Mob mob) {
+                BossLootData lootData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
+                if (lootData != null && lootData.nbt != null && !lootData.nbt.entrySet().isEmpty()) {
+                    LOGGER.info("[DailyBoss] Attempting to load entity NBT for mob: {}", selectedMobId);
+                    LOGGER.info("[DailyBoss] Raw NBT for {}: {}", selectedMobId, lootData.nbt);
+                    CompoundTag tag = CompoundTag.CODEC.parse(JsonOps.INSTANCE, lootData.nbt)
+                            .resultOrPartial(msg -> LOGGER.warn("[Daily Boss] Failed to parse NBT for mob {}: {}", selectedMobId, msg))
+                            .orElse(new CompoundTag());
+                    if (!tag.isEmpty()) {
+                        tag.putString("id", selectedMobId);
+                        Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
+                            e.setPos(this.getX(), this.getY(), this.getZ());
+                            return e;
+                        });
+
+                        if (loaded != null) {
+                            LOGGER.info("[DailyBoss] Loaded entity type: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
+                            if (loaded instanceof Mob loadedMob) {
+                                loadedMob.setPersistenceRequired();
+                                loadedMob.setTarget(player);
+                                level().addFreshEntity(loadedMob);
+                                summonedMobId = loadedMob.getUUID();
+                                usedCustomNBT = true;
+                            } else {
+                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
+                            }
+                        } else {
+                            LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);
+                        }
                     }
                 }
-
-                summonedMobId = mob.getUUID();
+                if (!usedCustomNBT){
+                    mob.setPos(this.getX(), this.getY(), this.getZ());
+                    mob.setPersistenceRequired();
+                    mob.setTarget(player);
+                    level().addFreshEntity(mob);
+                    summonedMobId = mob.getUUID();
+                }
+                level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
                 summonedMobRL = selectedMobId;
                 setState(KeyEntityState.DISAPPEARED);
                 return InteractionResult.SUCCESS;
@@ -251,16 +271,12 @@ public class KeyEntity extends Mob {
             this.noPhysics = true;
             this.updatedStateTime = System.currentTimeMillis();
             this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
-            this.setPos(this.getX(), this.getY() - 2.5, this.getZ());
-            this.isUnderground = true;
+            this.refreshDimensions();
         } else {
             this.setInvisible(false);
             this.setSilent(false);
             this.noPhysics = false;
-            if (this.isUnderground) {
-                this.setPos(this.getX(), this.getY() + 2.5, this.getZ());
-                this.isUnderground = false;
-            }
+            this.refreshDimensions();
         }
         if (!this.level().isClientSide) {
             ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
@@ -282,7 +298,6 @@ public class KeyEntity extends Mob {
                 this.summonedMobId = data.mobUUID();
                 this.state = data.state();
                 this.updatedStateTime = data.updatedTime();
-                this.isUnderground = data.underGround();
                 this.summonedMobRL = data.summonedMobRL();
                 this.entityData.set(DATA_STATE, this.state.ordinal());
                 this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
@@ -359,5 +374,10 @@ public class KeyEntity extends Mob {
     @Override
     public boolean isAttackable() {
         return false;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return this.state != KeyEntityState.DISAPPEARED;
     }
 }

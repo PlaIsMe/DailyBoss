@@ -24,8 +24,8 @@ public class KeyEntityManager extends SavedData {
         );
     }
 
-    public void update(UUID keyEntityUUID, UUID mobUUID, KeyEntityState state, long updatedTime, boolean underGround, String summonedMobRL) {
-        dataMap.put(keyEntityUUID, new KeyEntityData(mobUUID, state, updatedTime, underGround, summonedMobRL));
+    public void update(UUID keyEntityUUID, UUID mobUUID, KeyEntityState state, long updatedTime, String summonedMobRL) {
+        dataMap.put(keyEntityUUID, new KeyEntityData(mobUUID, state, updatedTime, summonedMobRL));
         setDirty();
     }
 
@@ -47,9 +47,8 @@ public class KeyEntityManager extends SavedData {
             UUID mobUUID = entry.contains("MobUUID") ? entry.getUUID("MobUUID") : null;
             KeyEntityState state = KeyEntityState.valueOf(entry.getString("State"));
             long time = entry.getLong("UpdatedTime");
-            boolean underground = entry.getBoolean("Underground");
             String summonedMobRL = entry.getString("SummonedMobRL");
-            manager.dataMap.put(keyUUID, new KeyEntityData(mobUUID, state, time, underground, summonedMobRL));
+            manager.dataMap.put(keyUUID, new KeyEntityData(mobUUID, state, time, summonedMobRL));
         }
         return manager;
     }
@@ -64,7 +63,6 @@ public class KeyEntityManager extends SavedData {
                 nbt.putUUID("MobUUID", entry.getValue().mobUUID());
             nbt.putString("State", entry.getValue().state().name());
             nbt.putLong("UpdatedTime", entry.getValue().updatedTime());
-            nbt.putBoolean("Underground", entry.getValue().underGround());
             nbt.putString("SummonedMobRL", entry.getValue().summonedMobRL());
             list.add(nbt);
         }
@@ -72,5 +70,5 @@ public class KeyEntityManager extends SavedData {
         return tag;
     }
 
-    public record KeyEntityData(UUID mobUUID, KeyEntityState state, long updatedTime, boolean underGround, String summonedMobRL) {}
+    public record KeyEntityData(UUID mobUUID, KeyEntityState state, long updatedTime, String summonedMobRL) {}
 }
