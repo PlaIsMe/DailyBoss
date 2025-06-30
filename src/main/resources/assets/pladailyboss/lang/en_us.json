@@ -7,5 +7,6 @@
   "block.pladailyboss.unbreakable_polished_andesite": "Unbreakable Polished Andesite",
   "block.pladailyboss.unbreakable_stone_brick_slab": "Unbreakable Stone Brick Slab",
   "block.pladailyboss.unbreakable_stone_slab": "Unbreakable Stone Slab",
-  "gui.pladailyboss.boss_screen": "Daily Boss List"
+  "gui.pladailyboss.boss_screen": "Daily Boss List",
+  "key.pladailyboss.open_entity_gui": "Open Bosses Menu"
 }

@@ -16,7 +16,7 @@ import org.lwjgl.glfw.GLFW;
 public class ClientModHandler {
     public static final KeyMapping OPEN_ENTITY_GUI_KEY = new KeyMapping(
             "key.pladailyboss.open_entity_gui",
-            GLFW.GLFW_KEY_O,
+            GLFW.GLFW_KEY_GRAVE_ACCENT,
             "key.categories.misc"
     );
 
