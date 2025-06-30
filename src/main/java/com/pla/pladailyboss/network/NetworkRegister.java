@@ -10,11 +10,11 @@ public class NetworkRegister {
         final PayloadRegistrar registrar = event.registrar("1")
                 .executesOn(HandlerThread.NETWORK);;
         registrar.playBidirectional(
-                Data.TYPE,
-                Data.STREAM_CODEC,
+                AskForDataMessage.TYPE,
+                AskForDataMessage.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(
-                        ClientPayloadHandler::handleDataOnNetwork,
-                        ServerPayloadHandler::handleDataOnNetwork
+                        ClientPayloadHandler::handleAskForDataMessage,
+                        ServerPayloadHandler::handleAskForDataMessage
                 )
         );
     }

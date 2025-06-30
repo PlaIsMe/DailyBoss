@@ -1,6 +1,8 @@
 package com.pla.pladailyboss.event;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -15,7 +17,10 @@ import java.util.List;
 
 public class RewardEvent {
     public static void dropLoot(ServerLevel level, ResourceLocation lootTableRL, BlockPos pos, int rolls) {
-        LootTable table = level.getServer().getLootData().getLootTable(lootTableRL);
+        ResourceKey<LootTable> lootTableKey = ResourceKey.create(Registries.LOOT_TABLE, lootTableRL);
+        LootTable table = level.getServer()
+                .reloadableRegistries()
+                .getLootTable(lootTableKey);
         LootParams.Builder ctxBuilder = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos));
 

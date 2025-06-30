@@ -4,7 +4,16 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class ServerPayloadHandler {
 
-    public static void handleDataOnNetwork(final Data data, final IPayloadContext context) {
-
+    public static void handleAskForDataMessage(final AskForDataMessage data, final IPayloadContext context) {
+//        ctx.get().enqueueWork(() -> {
+//            var player = ctx.get().getSender();
+//            if (player != null) {
+//                NetworkHandler.INSTANCE.send(
+//                        PacketDistributor.PLAYER.with(() -> player),
+//                        new BossListMessage(DailyBossLoader.getBossEntriesForPlayer(player, player.server))
+//                );
+//            }
+//        });
+//        ctx.get().setPacketHandled(true);
     }
 }
