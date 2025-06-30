@@ -13,6 +13,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -85,6 +86,7 @@ public class KeyEntity extends Mob {
         }
 
         if (!level().isClientSide) {
+            LOGGER.info("[DailyBoss] ");
             if (state == KeyEntityState.DISAPPEARED && !this.isInvisible()) {
                 this.setInvisible(true);
                 this.setSilent(true);
@@ -185,15 +187,17 @@ public class KeyEntity extends Mob {
                 return InteractionResult.PASS;
             }
 
-            List<String> mobIds = new ArrayList<>(DailyBossLoader.BOSS_LOOT_TABLES.keySet());
+            List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
+            if (mobIds.isEmpty()) {
+                LOGGER.warn("[DailyBoss] Please kill boss in real life");
+                return InteractionResult.PASS;
+            }
             String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
             ResourceLocation mobRL = new ResourceLocation(selectedMobId);
             EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
 
             if (type != null && type.create(level()) instanceof Mob mob) {
-                double offsetX = (random.nextDouble() - 0.5) * 1.5;
-                double offsetZ = (random.nextDouble() - 0.5) * 1.5;
-                mob.setPos(this.getX() + offsetX, this.getY(), this.getZ() + offsetZ);
+                mob.setPos(this.getX(), this.getY(), this.getZ());
                 mob.setPersistenceRequired();
                 level().addFreshEntity(mob);
                 level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);

@@ -3,6 +3,8 @@ package com.pla.pladailyboss.data;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
@@ -14,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DailyBossLoader extends SimpleJsonResourceReloadListener {
     public static Map<String, List<String>> BOSS_LOOT_TABLES = new HashMap<>();
@@ -75,6 +78,12 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
             LOGGER.info("Mob: {}", mob);
             loots.forEach(loot -> LOGGER.info("  -> {}", loot));
         });
+    }
+
+    public static List<String> getListBasedOnKilledMob(ServerPlayer player, MinecraftServer server) {
+        return BOSS_LOOT_TABLES.keySet().stream()
+                .filter(mobId -> StatsReader.getMobKillCountFromStatsFile(server, player, mobId) > 0)
+                .collect(Collectors.toList());
     }
 }
 
