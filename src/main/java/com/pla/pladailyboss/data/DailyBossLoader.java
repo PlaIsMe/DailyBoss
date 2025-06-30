@@ -3,6 +3,7 @@ package com.pla.pladailyboss.data;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pla.pladailyboss.enums.BossEntryState;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -75,8 +76,12 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
 
             JsonObject obj = element.getAsJsonObject();
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
+            JsonElement messageElement = obj.get("message");
+            String message = messageElement != null && messageElement.isJsonPrimitive()
+                    ? messageElement.getAsString()
+                    : "";
 
-            BOSS_LOOT_TABLES.put(mobId.toString(), new BossLootData(lootTables, nbt));
+            BOSS_LOOT_TABLES.put(mobId.toString(), new BossLootData(lootTables, nbt, message));
         }
 
         LOGGER.info("[DailyBoss] Loaded loot table map:");
@@ -109,25 +114,32 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
     }
 
     public static List<BossEntry> getBossEntriesForPlayer(ServerPlayer player, MinecraftServer server) {
-        return BOSS_LOOT_TABLES.keySet().stream()
-                .map(mobIdStr -> {
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(mobIdStr));
-                    boolean defeated = false;
+        return BOSS_LOOT_TABLES.entrySet().stream()
+                .map(entry -> {
+                    String mobIdStr = entry.getKey();
+                    BossLootData data = entry.getValue(); // <-- get message from here
+                    ResourceLocation mobId = new ResourceLocation(mobIdStr);
+                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
 
-                    if (entityType != null) {
-                        int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
-                        defeated = inMemoryKillCount > 0;
+                    if (entityType == null) {
+                        return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED, data.message);
                     }
 
-                    if (!defeated) {
-                        int fromFile = StatsReader.getMobKillCountFromStatsFile(server, player, mobIdStr);
-                        defeated = fromFile > 0;
+                    int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
+                    if (inMemoryKillCount > 0) {
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEAT, data.message);
                     }
 
-                    return new BossEntry(mobIdStr, defeated);
+                    int fromFile = StatsReader.getMobKillCountFromStatsFile(server, player, mobIdStr);
+                    if (fromFile > 0) {
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEAT, data.message);
+                    }
+
+                    return new BossEntry(mobIdStr, BossEntryState.NOT_DEFEAT, data.message);
                 })
                 .collect(Collectors.toList());
     }
+
 
 }
 

@@ -2,6 +2,7 @@ package com.pla.pladailyboss.network;
 
 import com.pla.pladailyboss.client.screen.BossScreen;
 import com.pla.pladailyboss.data.BossEntry;
+import com.pla.pladailyboss.enums.BossEntryState;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -26,7 +27,8 @@ public class BossListMessage {
         buf.writeInt(msg.bossList.size());
         for (BossEntry entry : msg.bossList) {
             buf.writeUtf(entry.name);
-            buf.writeBoolean(entry.defeated);
+            buf.writeEnum(entry.state);
+            buf.writeUtf(entry.message);
         }
     }
 
@@ -35,8 +37,9 @@ public class BossListMessage {
         List<BossEntry> bossList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             String name = buf.readUtf();
-            boolean defeated = buf.readBoolean();
-            bossList.add(new BossEntry(name, defeated));
+            BossEntryState state = buf.readEnum(BossEntryState.class); // read enum
+            String message = buf.readUtf();
+            bossList.add(new BossEntry(name, state, message));
         }
         return new BossListMessage(bossList);
     }

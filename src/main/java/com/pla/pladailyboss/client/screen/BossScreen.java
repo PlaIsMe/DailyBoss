@@ -2,6 +2,7 @@ package com.pla.pladailyboss.client.screen;
 
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.data.BossEntry;
+import com.pla.pladailyboss.enums.BossEntryState;
 import com.pla.pladailyboss.network.AskForDataMessage;
 import com.pla.pladailyboss.network.NetworkHandler;
 import net.minecraft.client.Minecraft;
@@ -15,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class BossScreen extends Screen {
@@ -33,11 +35,14 @@ public class BossScreen extends Screen {
     private Button pageButton;
     private List<BossEntry> entityIdStrings;
 
-    Minecraft mc = Minecraft.getInstance();
+
+
     private static final int BOX_WIDTH = 60;
     private static final int BOX_HEIGHT = 80;
-    private static final int PADDING_HORIZONTAL = 10;
-    private static final int PADDING_VERTICAL = 8;
+    private static final int GUI_WIDTH = 512;
+    private static final int GUI_HEIGHT = 320;
+    private static final int PADDING_HORIZONTAL = 5;
+    private static final int PADDING_VERTICAL = 4;
     private static final int BUTTON_SIZE = 20;
 
     public BossScreen() {
@@ -60,15 +65,14 @@ public class BossScreen extends Screen {
         if (this.entityIdStrings == null) return;
         super.init();
 
-        int bgLeft = width / 10;
-        int bgRight = width - width / 10;
-        int bgTop = height / 10;
-        int bgBottom = height - height / 10;
-        int bgWidth = bgRight - bgLeft;
-        int bgHeight = bgBottom - bgTop;
+        int bgLeft = (width - GUI_WIDTH) / 2;
+        int bgTop = (height - GUI_HEIGHT) / 2;
+        int bgRight = bgLeft + GUI_WIDTH;
+        int bgBottom = bgTop + GUI_HEIGHT;
+        int bgWidth = GUI_WIDTH;
 
         int maxColumns = Math.max(1, (bgWidth + PADDING_HORIZONTAL) / (BOX_WIDTH + PADDING_HORIZONTAL));
-        int maxRows = Math.max(1, (bgHeight + PADDING_VERTICAL) / (BOX_HEIGHT + PADDING_VERTICAL));
+        int maxRows = Math.max(1, (GUI_HEIGHT + PADDING_VERTICAL) / (BOX_HEIGHT + PADDING_VERTICAL));
 
         int entitiesPerPage = maxRows * maxColumns;
         totalPages = Math.max(1, (int) Math.ceil(entityIdStrings.size() / (double) entitiesPerPage));
@@ -109,7 +113,7 @@ public class BossScreen extends Screen {
     }
 
     private void drawEntityCard(GuiGraphics guiGraphics, int x, int y, BossEntry bossEntry) {
-        String prefixImage = bossEntry.defeated ? "_enabled.png" : "_disabled.png";
+        String prefixImage = (bossEntry.state == BossEntryState.DEFEAT ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_corrupted" : "_disabled.png"));
         String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
         ResourceLocation entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {
@@ -127,25 +131,25 @@ public class BossScreen extends Screen {
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         renderBackground(guiGraphics);
-        int bgLeft = width / 10;
-        int bgRight = width - width / 10;
-        int bgTop = height / 10;
-        int bgBottom = height - height / 10;
-        int bgWidth = bgRight - bgLeft;
-        int bgHeight = bgBottom - bgTop;
+        int bgLeft = (width - GUI_WIDTH) / 2;
+        int bgTop = (height - GUI_HEIGHT) / 2;
+        int bgWidth = GUI_WIDTH;
+        int bgHeight = GUI_HEIGHT;
         guiGraphics.blit(BACKGROUND, bgLeft, bgTop, 0, 0, bgWidth, bgHeight, bgWidth, bgHeight);
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
         if (this.entityIdStrings == null) return;
 
-        int maxColumns = Math.max(1, (bgWidth + PADDING_HORIZONTAL) / (BOX_WIDTH + PADDING_HORIZONTAL));
+        int usableWidth = GUI_WIDTH - 2 * PADDING_HORIZONTAL;
+        int maxColumns = usableWidth / (BOX_WIDTH + PADDING_HORIZONTAL);
         int totalWidth = maxColumns * BOX_WIDTH + (maxColumns - 1) * PADDING_HORIZONTAL;
-        int startX = bgLeft + (bgWidth - totalWidth) / 2;
+        int startX = bgLeft + (GUI_WIDTH - totalWidth) / 2;
 
-        int maxRows = Math.max(1, (bgHeight + PADDING_VERTICAL) / (BOX_HEIGHT + PADDING_VERTICAL));
+        int usableHeight = GUI_HEIGHT - 2 * PADDING_VERTICAL;
+        int maxRows = usableHeight / (BOX_HEIGHT + PADDING_VERTICAL);
         int totalHeight = maxRows * BOX_HEIGHT + (maxRows - 1) * PADDING_VERTICAL;
-        int startY = bgTop + (bgHeight - totalHeight) / 2;
+        int startY = bgTop + (GUI_HEIGHT - totalHeight) / 2;
 
         int entitiesPerPage = maxRows * maxColumns;
         totalPages = Math.max(1, (int) Math.ceil(entityIdStrings.size() / (double) entitiesPerPage));

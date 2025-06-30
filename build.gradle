@@ -59,12 +59,15 @@ sourceSets.main.resources { srcDirs = ['src/main/resources', 'src/generated/reso
 repositories {
     mavenCentral()
     maven {
-        url = uri("https://company/com/maven2")
+        url = uri("https://cursemaven.com")
     }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    implementation fg.deobf("curse.maven:ftbchunks-314906:6431735")
+    implementation fg.deobf("curse.maven:ftblibrary-404465:6164053")
+    implementation fg.deobf("curse.maven:ftbteams-404468:6130786")
 }
 
 tasks.named('processResources', ProcessResources).configure {
