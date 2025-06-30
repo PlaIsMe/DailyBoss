@@ -1,9 +1,0 @@
-{
-  "loot_table": [
-    "minecraft:chests/bastion_treasure",
-    "minecraft:chests/bastion_other"
-  ],
-  "nbt": {
-    "Invul": 202
-  }
-}
