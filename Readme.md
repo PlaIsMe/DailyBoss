@@ -14,6 +14,11 @@
 - A built-in UI displays a **paginated** list of available bosses.
 - Resource packs can be used to customize boss posters shown in the UI.
 
+## Requirements
+FTB Chunks is required.
+This mod is used to automatically claim the chunk where the Key Entity is located, ensuring it always stays loaded and ticking — even when players leave the area.
+This is crucial for tracking the 24-hour real-time reset and keeping the entity alive and functional.
+
 ## How to Play
 
 1. Find the **Colosseum** structure in your world.
