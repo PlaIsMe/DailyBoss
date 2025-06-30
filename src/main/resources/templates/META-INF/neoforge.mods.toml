@@ -8,9 +8,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''${mod_description}'''
 [[dependencies.pladailyboss]]
-    modId="forge"
+    modId="neoforge"
     mandatory=true
-    versionRange="${forge_version_range}"
+    versionRange="${neo_version_range}"
     ordering="NONE"
     side="BOTH"
 [[dependencies.pladailyboss]]
@@ -22,6 +22,6 @@ description='''${mod_description}'''
 [[dependencies.pladailyboss]]
     modId="ftbchunks"
     mandatory=true
-    versionRange="[2001.3.6,)"
+    versionRange="[2101.1.9,)"
     ordering="AFTER"
     side="BOTH"

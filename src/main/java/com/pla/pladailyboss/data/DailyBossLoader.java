@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pla.pladailyboss.enums.BossEntryState;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -12,8 +13,7 @@ import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.fml.ModList;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.fml.ModList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -68,11 +68,12 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 continue;
             }
 
-            ResourceLocation mobId = new ResourceLocation(namespace, mobPath);
-            if (!ForgeRegistries.ENTITY_TYPES.containsKey(mobId)) {
+            ResourceLocation mobId = ResourceLocation.fromNamespaceAndPath(namespace, mobPath);
+            if (!BuiltInRegistries.ENTITY_TYPE.containsKey(mobId)) {
                 LOGGER.warn("[DailyBoss] Skipping '{}' because entity '{}' is not registered.", id, mobId);
                 continue;
             }
+
 
             JsonObject obj = element.getAsJsonObject();
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
@@ -98,12 +99,14 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return BOSS_LOOT_TABLES.keySet().stream()
                 .filter(mobId -> {
                     // Memory Check
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(mobId));
-                    if (entityType != null) {
-                        int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
-                        if (inMemoryKillCount > 0) {
-                            return true;
-                        }
+                    String[] parts = mobId.split(":", 2);
+                    String namespace = parts.length > 1 ? parts[0] : "minecraft";
+                    String path = parts.length > 1 ? parts[1] : parts[0];
+                    ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, path);
+                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(id);
+                    int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
+                    if (inMemoryKillCount > 0) {
+                        return true;
                     }
 
                     // JSON check
@@ -118,12 +121,11 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 .map(entry -> {
                     String mobIdStr = entry.getKey();
                     BossLootData data = entry.getValue(); // <-- get message from here
-                    ResourceLocation mobId = new ResourceLocation(mobIdStr);
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
-
-                    if (entityType == null) {
-                        return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED, data.message);
-                    }
+                    String[] parts = mobIdStr.split(":", 2);
+                    String namespace = parts.length > 1 ? parts[0] : "minecraft";
+                    String path = parts.length > 1 ? parts[1] : parts[0];
+                    ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, path);
+                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(id);
 
                     int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
                     if (inMemoryKillCount > 0) {

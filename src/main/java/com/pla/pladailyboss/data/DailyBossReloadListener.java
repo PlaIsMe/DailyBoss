@@ -1,13 +1,14 @@
 package com.pla.pladailyboss.data;
 
 import com.pla.pladailyboss.PlaDailyBoss;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-@Mod.EventBusSubscriber(modid = PlaDailyBoss.MOD_ID)
+@EventBusSubscriber(modid = PlaDailyBoss.MOD_ID)
 public class DailyBossReloadListener {
     private static final Logger LOGGER = LogManager.getLogger();
 

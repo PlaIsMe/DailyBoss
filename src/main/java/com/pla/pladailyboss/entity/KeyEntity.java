@@ -32,7 +32,6 @@ import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -58,11 +57,11 @@ public class KeyEntity extends Mob {
             SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_STATE, KeyEntityState.NORMAL.ordinal());
-        this.entityData.define(UPDATED_STATE_TIME, 0L);
-        this.entityData.define(RECHARGE_COOLDOWN, 0L);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_STATE, KeyEntityState.NORMAL.ordinal());
+        builder.define(UPDATED_STATE_TIME, 0L);
+        builder.define(RECHARGE_COOLDOWN, 0L);
     }
 
     public KeyEntity(EntityType<? extends Mob> type, Level level) {

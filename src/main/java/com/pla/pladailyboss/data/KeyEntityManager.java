@@ -2,26 +2,31 @@ package com.pla.pladailyboss.data;
 
 import com.google.common.collect.Maps;
 import com.pla.pladailyboss.enums.KeyEntityState;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.Map;
 import java.util.UUID;
 
 public class KeyEntityManager extends SavedData {
+    public static final String DATA_NAME = "pla_key_entity_manager";
     private final Map<UUID, KeyEntityData> dataMap = Maps.newHashMap();
 
-    public static final String DATA_NAME = "pla_key_entity_manager";
+    public KeyEntityManager() {}
+
+    public static final SavedData.Factory<KeyEntityManager> FACTORY = new SavedData.Factory<>(
+            KeyEntityManager::new,
+            KeyEntityManager::load,
+            DataFixTypes.LEVEL
+    );
 
     public static KeyEntityManager get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(
-                KeyEntityManager::load,
-                KeyEntityManager::new,
-                DATA_NAME
-        );
+        return level.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
     }
 
     public void update(UUID keyEntityUUID, UUID mobUUID, KeyEntityState state, long updatedTime, String summonedMobRL) {
@@ -38,7 +43,7 @@ public class KeyEntityManager extends SavedData {
         setDirty();
     }
 
-    public static KeyEntityManager load(CompoundTag tag) {
+    public static KeyEntityManager load(CompoundTag tag, HolderLookup.Provider provider) {
         KeyEntityManager manager = new KeyEntityManager();
         ListTag list = tag.getList("KeyEntities", Tag.TAG_COMPOUND);
         for (Tag t : list) {
@@ -54,13 +59,14 @@ public class KeyEntityManager extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
         ListTag list = new ListTag();
         for (Map.Entry<UUID, KeyEntityData> entry : dataMap.entrySet()) {
             CompoundTag nbt = new CompoundTag();
             nbt.putUUID("KeyUUID", entry.getKey());
-            if (entry.getValue().mobUUID() != null)
+            if (entry.getValue().mobUUID() != null) {
                 nbt.putUUID("MobUUID", entry.getValue().mobUUID());
+            }
             nbt.putString("State", entry.getValue().state().name());
             nbt.putLong("UpdatedTime", entry.getValue().updatedTime());
             nbt.putString("SummonedMobRL", entry.getValue().summonedMobRL());

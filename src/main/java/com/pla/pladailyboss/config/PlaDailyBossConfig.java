@@ -1,14 +1,16 @@
 package com.pla.pladailyboss.config;
 
-import net.minecraftforge.common.ForgeConfigSpec;
 
-import java.util.List;
+import com.pla.pladailyboss.PlaDailyBoss;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
+@EventBusSubscriber(modid = PlaDailyBoss.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public class PlaDailyBossConfig {
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
 
-    public static ForgeConfigSpec.ConfigValue<Long> COOL_DOWN;
+    public static ModConfigSpec.ConfigValue<Long> COOL_DOWN;
 
     static {
         COOL_DOWN = BUILDER.comment(
