@@ -4,11 +4,11 @@ package com.pla.pladailyboss.event;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.entity.KeyEntity;
 import com.pla.pladailyboss.init.EntityInit;
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 
-@Mod.EventBusSubscriber(modid = PlaDailyBoss.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = PlaDailyBoss.MOD_ID)
 public class ModEventBusEvents {
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {

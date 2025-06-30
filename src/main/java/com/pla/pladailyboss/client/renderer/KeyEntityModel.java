@@ -36,8 +36,8 @@ public class KeyEntityModel<T extends Entity> extends EntityModel<T>  {
     }
 
     @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        board.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
-        stick.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int i, int i1, int i2) {
+        board.render(poseStack, vertexConsumer, i, i1);
+        stick.render(poseStack, vertexConsumer, i, i1);
     }
 }

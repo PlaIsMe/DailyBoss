@@ -3,8 +3,8 @@ package com.pla.pladailyboss.client.screen;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.data.BossEntry;
 import com.pla.pladailyboss.enums.BossEntryState;
-import com.pla.pladailyboss.network.AskForDataMessage;
-import com.pla.pladailyboss.network.NetworkHandler;
+//import com.pla.pladailyboss.network.AskForDataMessage;
+//import com.pla.pladailyboss.network.NetworkHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -28,7 +28,7 @@ public class BossScreen extends Screen {
     private static final String posterPath = "textures/gui/entity_posters/";
 
     private static final ResourceLocation BACKGROUND =
-            new ResourceLocation(PlaDailyBoss.MOD_ID, "textures/gui/screen_background.png");
+            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/screen_background.png");
 
     private int currentPage;
     private int totalPages;
@@ -48,7 +48,7 @@ public class BossScreen extends Screen {
     public BossScreen() {
         super(TITLE);
         instance = this;
-        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
+//        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
     }
 
     public static BossScreen getInstance() {
@@ -115,9 +115,9 @@ public class BossScreen extends Screen {
     private void drawEntityCard(GuiGraphics guiGraphics, int x, int y, BossEntry bossEntry) {
         String prefixImage = (bossEntry.state == BossEntryState.DEFEAT ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_corrupted" : "_disabled.png"));
         String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
-        ResourceLocation entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, entityPoster);
+        ResourceLocation entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {
-            entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
+            entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
         }
         guiGraphics.blit(
                 entityCardTexture,
@@ -130,7 +130,7 @@ public class BossScreen extends Screen {
 
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        renderBackground(guiGraphics);
+        renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
         int bgLeft = (width - GUI_WIDTH) / 2;
         int bgTop = (height - GUI_HEIGHT) / 2;
         int bgWidth = GUI_WIDTH;

@@ -12,6 +12,7 @@ import com.pla.pladailyboss.event.RewardEvent;
 import com.pla.pladailyboss.ftb.ClaimChunkHelper;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -137,9 +138,10 @@ public class KeyEntity extends Mob {
                     List<String> lootTables = data != null ? data.lootTables : Collections.emptyList();
                     for (int i = 0; i < 5; i++) {
                         String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
+                        String[] parts = lootTableId.split(":", 2);
                         RewardEvent.dropLoot(
                             (ServerLevel) level(),
-                            new ResourceLocation(lootTableId),
+                            ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]),
                             this.getOnPos(),
                             1
                         );
@@ -189,8 +191,9 @@ public class KeyEntity extends Mob {
                 return InteractionResult.PASS;
             }
             String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
-            ResourceLocation mobRL = new ResourceLocation(selectedMobId);
-            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
+            String[] parts = selectedMobId.split(":", 2);
+            ResourceLocation mobRL = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
+            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(mobRL);
 
             boolean usedCustomNBT = false;
 
@@ -215,7 +218,7 @@ public class KeyEntity extends Mob {
                                 summonedMobId = loadedMob.getUUID();
                                 usedCustomNBT = true;
                             } else {
-                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
+                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", BuiltInRegistries.ENTITY_TYPE.getKey(loaded.getType()));
                             }
                         } else {
                             LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);
@@ -293,8 +296,8 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public void onAddedToWorld() {
-        super.onAddedToWorld();
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
 
         if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
