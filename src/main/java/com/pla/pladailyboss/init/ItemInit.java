@@ -3,6 +3,7 @@ package com.pla.pladailyboss.init;
 import com.pla.pladailyboss.PlaDailyBoss;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.*;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
@@ -29,4 +30,8 @@ public class ItemInit {
     public static final Supplier<BlockItem> UNBREAKABLE_POLISHED_ANDESITE_ITEM = ITEMS.register("unbreakable_polished_andesite",
             () -> new BlockItem(BlockInit.UNBREAKABLE_POLISHED_ANDESITE.get(),
                     new Item.Properties().rarity(Rarity.UNCOMMON)));
+
+    public static void register(IEventBus eventBus) {
+        ITEMS.register(eventBus);
+    }
 }

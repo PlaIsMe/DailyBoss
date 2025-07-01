@@ -2,6 +2,8 @@ package com.pla.pladailyboss;
 
 import com.mojang.logging.LogUtils;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
+import com.pla.pladailyboss.data.DailyBossLoader;
+import com.pla.pladailyboss.entity.KeyEntity;
 import com.pla.pladailyboss.init.BlockInit;
 import com.pla.pladailyboss.init.EntityInit;
 import com.pla.pladailyboss.init.ItemInit;
@@ -17,7 +19,9 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
@@ -31,12 +35,23 @@ public class PlaDailyBoss
     public PlaDailyBoss(IEventBus modEventBus, ModContainer modContainer) {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(NetworkRegister::register);
-//        modEventBus.addListener(DailyBossReloadListener::register);
+        modEventBus.addListener(this::registerAttributes);
+
         modContainer.registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC);
 
-        NeoForge.EVENT_BUS.register(EntityInit.class);
-        NeoForge.EVENT_BUS.register(BlockInit.class);
-        NeoForge.EVENT_BUS.register(ItemInit.class);
+        EntityInit.register(modEventBus);
+        BlockInit.register(modEventBus);
+        ItemInit.register(modEventBus);
+
+        NeoForge.EVENT_BUS.addListener(this::onAddReloadListeners);
+    }
+
+    private void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(new DailyBossLoader());
+    }
+
+    public void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put(EntityInit.KEY_ENTITY.get(), KeyEntity.createAttributes().build());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -60,4 +75,5 @@ public class PlaDailyBoss
             LOGGER.info("Client setup loaded. Logged in as: {}", Minecraft.getInstance().getUser().getName());
         }
     }
+
 }

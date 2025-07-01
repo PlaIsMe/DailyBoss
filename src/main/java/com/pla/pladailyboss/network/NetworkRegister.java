@@ -1,21 +1,22 @@
 package com.pla.pladailyboss.network;
 
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.HandlerThread;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class NetworkRegister {
     public static void register(final RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1")
-                .executesOn(HandlerThread.NETWORK);;
-        registrar.playBidirectional(
+                .executesOn(HandlerThread.NETWORK);
+        registrar.playToServer(
                 AskForDataMessage.TYPE,
                 AskForDataMessage.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(
-                        ClientPayloadHandler::handleAskForDataMessage,
-                        ServerPayloadHandler::handleAskForDataMessage
-                )
+                ServerPayloadHandler::handleAskForDataMessage
+        );
+        registrar.playToClient(
+                BossListMessage.TYPE,
+                BossListMessage.STREAM_CODEC,
+                ClientPayloadHandler::handleBossListMessage
         );
     }
 }

@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public record AskForDataMessage(String message) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<AskForDataMessage> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("pladailyboss", "data"));
+    public static final CustomPacketPayload.Type<AskForDataMessage> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath("pladailyboss", "ask_for_message_data"));
     public static final StreamCodec<ByteBuf, AskForDataMessage> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8,
             AskForDataMessage::message,

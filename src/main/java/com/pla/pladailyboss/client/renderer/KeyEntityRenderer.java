@@ -25,10 +25,12 @@ import org.jetbrains.annotations.NotNull;
 public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<KeyEntity>> {
     private final EntityRendererProvider.Context context;
     private static final Logger LOGGER = LogManager.getLogger();
+    private final Font font;
 
     public KeyEntityRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new KeyEntityModel<>(pContext.bakeLayer(ModModelLayers.KEY_ENTITY_LAYER)), 0.0f);
         this.context = pContext;
+        this.font = context.getFont();
     }
 
     @Override
@@ -85,9 +87,12 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
                 pPoseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
                 pPoseStack.scale(-0.02f, -0.02f, 0.02f);
 
-                context.getFont().drawInBatch(
+                Minecraft instance = Minecraft.getInstance();
+                Font font = instance.font;
+
+                font.drawInBatch(
                         timerText,
-                        -context.getFont().width(timerText) / 2f,
+                        font.width(timerText) / 2f,
                         0,
                         0x00FF00,
                         false,

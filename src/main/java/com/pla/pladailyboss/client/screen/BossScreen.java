@@ -3,8 +3,7 @@ package com.pla.pladailyboss.client.screen;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.data.BossEntry;
 import com.pla.pladailyboss.enums.BossEntryState;
-//import com.pla.pladailyboss.network.AskForDataMessage;
-//import com.pla.pladailyboss.network.NetworkHandler;
+import com.pla.pladailyboss.network.AskForDataMessage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -12,11 +11,11 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class BossScreen extends Screen {
@@ -48,7 +47,7 @@ public class BossScreen extends Screen {
     public BossScreen() {
         super(TITLE);
         instance = this;
-//        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
+        PacketDistributor.sendToServer(new AskForDataMessage(""));
     }
 
     public static BossScreen getInstance() {

@@ -2,7 +2,9 @@ package com.pla.pladailyboss.config;
 
 
 import com.pla.pladailyboss.PlaDailyBoss;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 @EventBusSubscriber(modid = PlaDailyBoss.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
@@ -20,5 +22,9 @@ public class PlaDailyBossConfig {
                         "Maximum: 7 days = 86400000 * 7 = 604800000")
                 .defineInRange("coolDown", 86400000L, 10000L, 604800000L);
         SPEC = BUILDER.build();
+    }
+
+    @SubscribeEvent
+    public static void onLoad(final ModConfigEvent event) {
     }
 }

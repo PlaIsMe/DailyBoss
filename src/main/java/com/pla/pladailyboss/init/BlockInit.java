@@ -5,6 +5,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
@@ -28,7 +29,7 @@ public class BlockInit {
     public static final Supplier<Block> UNBREAKABLE_POLISHED_ANDESITE = BLOCKS.register("unbreakable_polished_andesite",
             () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.BEDROCK)));
 
-    public static void registerToEventBus(net.neoforged.bus.api.IEventBus bus) {
-        BLOCKS.register(bus);
+    public static void register(IEventBus eventBus) {
+        BLOCKS.register(eventBus);
     }
 }
