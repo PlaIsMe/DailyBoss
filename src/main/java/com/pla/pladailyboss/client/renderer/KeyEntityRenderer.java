@@ -6,6 +6,7 @@ import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.entity.KeyEntity;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.init.BlockInit;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
@@ -25,12 +26,10 @@ import org.jetbrains.annotations.NotNull;
 public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<KeyEntity>> {
     private final EntityRendererProvider.Context context;
     private static final Logger LOGGER = LogManager.getLogger();
-    private final Font font;
 
     public KeyEntityRenderer(EntityRendererProvider.Context pContext) {
         super(pContext, new KeyEntityModel<>(pContext.bakeLayer(ModModelLayers.KEY_ENTITY_LAYER)), 0.0f);
         this.context = pContext;
-        this.font = context.getFont();
     }
 
     @Override
@@ -84,21 +83,21 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
                 String timerText = String.format("%02d:%02d:%02d", hours, minutes, seconds);
                 pPoseStack.pushPose();
                 pPoseStack.translate(0, 3.5, 0);
-                pPoseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+                Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+
+                pPoseStack.mulPose(Axis.YP.rotationDegrees(-camera.getYRot()));
+                pPoseStack.mulPose(Axis.XP.rotationDegrees(camera.getXRot()));
                 pPoseStack.scale(-0.02f, -0.02f, 0.02f);
 
-                Minecraft instance = Minecraft.getInstance();
-                Font font = instance.font;
-
-                font.drawInBatch(
+                context.getFont().drawInBatch(
                         timerText,
-                        font.width(timerText) / 2f,
+                        -context.getFont().width(timerText) / 2f,
                         0,
                         0x00FF00,
                         false,
                         pPoseStack.last().pose(),
                         pBuffer,
-                        Font.DisplayMode.NORMAL,
+                        Font.DisplayMode.SEE_THROUGH,
                         0,
                         LightTexture.FULL_BRIGHT
                 );
