@@ -4,7 +4,7 @@ license="All rights reserved"
 [[mods]]
 modId="pladailyboss"
 version="${file.jarVersion}"
-displayName="Pla Daily Boss"
+displayName="Daily Boss"
 logoFile="examplemod.png"
 credits="Thanks for this example mod goes to Java"
 authors="pla_is_me"
