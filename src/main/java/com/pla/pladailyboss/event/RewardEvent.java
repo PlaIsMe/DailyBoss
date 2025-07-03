@@ -5,7 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -15,8 +15,8 @@ import java.util.List;
 
 public class RewardEvent {
     public static void dropLoot(ServerLevel level, ResourceLocation lootTableRL, BlockPos pos, int rolls) {
-        LootTable table = level.getServer().getLootData().getLootTable(lootTableRL);
-        LootParams.Builder ctxBuilder = new LootParams.Builder(level)
+        LootTable table = level.getServer().getLootTables().get(lootTableRL);
+        LootContext.Builder ctxBuilder = new LootContext.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos));
 
         for (int i = 0; i < rolls; i++) {

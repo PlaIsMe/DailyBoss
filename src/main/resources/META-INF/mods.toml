@@ -1,27 +1,37 @@
 modLoader="javafml"
-loaderVersion="${loader_version_range}"
-license="${mod_license}"
+loaderVersion="[40,)"
+license="All rights reserved"
 [[mods]]
-modId="${mod_id}"
-version="${mod_version}"
-displayName="${mod_name}"
-authors="${mod_authors}"
-description='''${mod_description}'''
+modId="pladailyboss"
+version="${file.jarVersion}"
+displayName="Pla Daily Boss"
+logoFile="examplemod.png"
+credits="Thanks for this example mod goes to Java"
+authors="pla_is_me"
+description='''
+Pla made this mod for adding daily boss to Minecraft.
+'''
 [[dependencies.pladailyboss]]
     modId="forge"
     mandatory=true
-    versionRange="${forge_version_range}"
+    versionRange="[43.5.0,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.pladailyboss]]
     modId="minecraft"
     mandatory=true
-    versionRange="${minecraft_version_range}"
+    versionRange="[1.19.2,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.pladailyboss]]
     modId="ftbchunks"
     mandatory=true
-    versionRange="[2001.3.6,)"
+    versionRange="[1902.4.7,)"
     ordering="AFTER"
+    side="BOTH"
+[[dependencies.pladailyboss]]
+    modId="experimentalsettingsdisabler"
+    mandatory=false
+    versionRange="[1.0,)"
+    ordering="NONE"
     side="BOTH"

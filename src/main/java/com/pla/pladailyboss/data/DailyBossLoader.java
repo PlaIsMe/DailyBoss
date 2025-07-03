@@ -68,7 +68,7 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 continue;
             }
 
-            ResourceLocation mobId = new ResourceLocation(namespace, mobPath);
+            ResourceLocation mobId = ResourceLocation.fromNamespaceAndPath(namespace, mobPath);
             if (!ForgeRegistries.ENTITY_TYPES.containsKey(mobId)) {
                 LOGGER.warn("[DailyBoss] Skipping '{}' because entity '{}' is not registered.", id, mobId);
                 continue;
@@ -98,7 +98,8 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return BOSS_LOOT_TABLES.keySet().stream()
                 .filter(mobId -> {
                     // Memory Check
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(mobId));
+                    String[] parts = mobId.split(":");
+                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]));
                     if (entityType != null) {
                         int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
                         if (inMemoryKillCount > 0) {
@@ -117,8 +118,10 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return BOSS_LOOT_TABLES.entrySet().stream()
                 .map(entry -> {
                     String mobIdStr = entry.getKey();
-                    BossLootData data = entry.getValue(); // <-- get message from here
-                    ResourceLocation mobId = new ResourceLocation(mobIdStr);
+                    BossLootData data = entry.getValue();
+
+                    String[] parts = mobIdStr.split(":");
+                    ResourceLocation mobId = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
                     EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
 
                     if (entityType == null) {

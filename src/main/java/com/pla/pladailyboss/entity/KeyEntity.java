@@ -8,7 +8,6 @@ import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.KeyEntityManager;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
-//import com.pla.pladailyboss.ftb.ClaimChunkHelper;
 import com.pla.pladailyboss.ftb.ClaimChunkHelper;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,7 +27,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -52,28 +50,28 @@ public class KeyEntity extends Mob {
 
     private static final EntityDataAccessor<Integer> DATA_STATE =
             SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Long> UPDATED_STATE_TIME =
-            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
-    private static final EntityDataAccessor<Long> RECHARGE_COOLDOWN =
-            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<String> UPDATED_STATE_TIME =
+            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> RECHARGE_COOLDOWN =
+            SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.STRING);
 
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_STATE, KeyEntityState.NORMAL.ordinal());
-        this.entityData.define(UPDATED_STATE_TIME, 0L);
-        this.entityData.define(RECHARGE_COOLDOWN, 0L);
+        this.entityData.define(UPDATED_STATE_TIME, "");
+        this.entityData.define(RECHARGE_COOLDOWN, "");
     }
 
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
         this.setBoundingBox(new AABB(getX(), getY(), getZ(), getX(), getY(), getZ()));
-        this.entityData.set(RECHARGE_COOLDOWN, this.rechargeCooldown);
+        this.entityData.set(RECHARGE_COOLDOWN, String.valueOf(this.rechargeCooldown));
     }
 
     public void updateDataToManager() {
-        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+        if (!this.level.isClientSide && this.level instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
             manager.update(this.getUUID(), this.summonedMobId, this.state, this.updatedStateTime, this.summonedMobRL);
         }
@@ -83,12 +81,12 @@ public class KeyEntity extends Mob {
     public void tick() {
         super.tick();
 
-        Player player = level().getNearestPlayer(this, 10);
+        Player player = level.getNearestPlayer(this, 10);
         if (player != null) {
             this.lookAt(EntityAnchorArgument.Anchor.EYES, player.position());
         }
 
-        if (!level().isClientSide) {
+        if (!level.isClientSide) {
             if (state == KeyEntityState.DISAPPEARED && !this.isInvisible()) {
                 this.setInvisible(true);
                 this.setSilent(true);
@@ -103,7 +101,7 @@ public class KeyEntity extends Mob {
                 return;
             }
 
-            ((ServerLevel) level()).sendParticles(ParticleTypes.ENCHANT,
+            ((ServerLevel) level).sendParticles(ParticleTypes.ENCHANT,
                     this.getX(), this.getY() + 3.5, this.getZ(),
                     2,
                     0.2, 0.2, 0.2,
@@ -111,7 +109,7 @@ public class KeyEntity extends Mob {
             );
 
             if (summonedMobId != null) {
-                Entity entity = ((ServerLevel) level()).getEntity(summonedMobId);
+                Entity entity = ((ServerLevel) level).getEntity(summonedMobId);
 
                 if (entity instanceof Mob mob) {
                     double distance = this.distanceToSqr(mob);
@@ -138,16 +136,17 @@ public class KeyEntity extends Mob {
                     List<String> lootTables = data != null ? data.lootTables : Collections.emptyList();
                     for (int i = 0; i < 5; i++) {
                         String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
+                        String[] parts = lootTableId.split(":");
                         RewardEvent.dropLoot(
-                            (ServerLevel) level(),
-                            new ResourceLocation(lootTableId),
+                            (ServerLevel) level,
+                            ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]),
                             this.getOnPos(),
                             1
                         );
                     }
                     int xpAmount = 1395;
-                    level().addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
-                        level(),
+                    level.addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
+                        level,
                         this.getOnPos().getX() + 0.5,
                         this.getOnPos().getY() + 1,
                         this.getOnPos().getZ() + 0.5,
@@ -162,7 +161,7 @@ public class KeyEntity extends Mob {
 
     @Override
     protected @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
-        if (!level().isClientSide && hand == InteractionHand.MAIN_HAND) {
+        if (!level.isClientSide && hand == InteractionHand.MAIN_HAND) {
             if (state == KeyEntityState.DISABLED) {
                 long remaining = this.rechargeCooldown - (System.currentTimeMillis() - updatedStateTime);
                 long seconds = (remaining / 1000) % 60;
@@ -190,12 +189,13 @@ public class KeyEntity extends Mob {
                 return InteractionResult.PASS;
             }
             String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
-            ResourceLocation mobRL = new ResourceLocation(selectedMobId);
+            String[] parts = selectedMobId.split(":");
+            ResourceLocation mobRL = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
             EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
 
             boolean usedCustomNBT = false;
 
-            if (type != null && type.create(level()) instanceof Mob mob) {
+            if (type != null && type.create(level) instanceof Mob mob) {
                 BossLootData lootData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
                 if (lootData != null && lootData.nbt != null && !lootData.nbt.entrySet().isEmpty()) {
                     CompoundTag tag = CompoundTag.CODEC.parse(JsonOps.INSTANCE, lootData.nbt)
@@ -203,7 +203,7 @@ public class KeyEntity extends Mob {
                             .orElse(new CompoundTag());
                     if (!tag.isEmpty()) {
                         tag.putString("id", selectedMobId);
-                        Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
+                        Entity loaded = EntityType.loadEntityRecursive(tag, level, e -> {
                             e.setPos(this.getX(), this.getY(), this.getZ());
                             return e;
                         });
@@ -212,7 +212,7 @@ public class KeyEntity extends Mob {
                             if (loaded instanceof Mob loadedMob) {
                                 loadedMob.setPersistenceRequired();
                                 loadedMob.setTarget(player);
-                                level().addFreshEntity(loadedMob);
+                                level.addFreshEntity(loadedMob);
                                 summonedMobId = loadedMob.getUUID();
                                 usedCustomNBT = true;
                             } else {
@@ -227,10 +227,10 @@ public class KeyEntity extends Mob {
                     mob.setPos(this.getX(), this.getY(), this.getZ());
                     mob.setPersistenceRequired();
                     mob.setTarget(player);
-                    level().addFreshEntity(mob);
+                    level.addFreshEntity(mob);
                     summonedMobId = mob.getUUID();
                 }
-                level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+                level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
                 summonedMobRL = selectedMobId;
                 setState(KeyEntityState.DISAPPEARED);
                 ClaimChunkHelper claimChunkHelper = null;
@@ -248,24 +248,24 @@ public class KeyEntity extends Mob {
     }
 
     public KeyEntityState getState() {
-        if (level().isClientSide) {
+        if (level.isClientSide) {
             return KeyEntityState.values()[this.entityData.get(DATA_STATE)];
         }
         return this.state;
     }
 
-    public Long getUpdatedStateTime() {
-        if (level().isClientSide) {
+    public String getUpdatedStateTime() {
+        if (level.isClientSide) {
             return this.entityData.get(UPDATED_STATE_TIME);
         }
-        return this.updatedStateTime;
+        return String.valueOf(this.updatedStateTime);
     }
 
-    public Long getRechargeCooldown() {
-        if (level().isClientSide) {
+    public String getRechargeCooldown() {
+        if (level.isClientSide) {
             return this.entityData.get(RECHARGE_COOLDOWN);
         }
-        return this.rechargeCooldown;
+        return String.valueOf(this.rechargeCooldown);
     }
 
     public void setState(KeyEntityState newState) {
@@ -277,7 +277,7 @@ public class KeyEntity extends Mob {
             this.setSilent(true);
             this.noPhysics = true;
             this.updatedStateTime = System.currentTimeMillis();
-            this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+            this.entityData.set(UPDATED_STATE_TIME, String.valueOf(this.updatedStateTime));
             this.refreshDimensions();
         } else {
             this.setInvisible(false);
@@ -285,8 +285,8 @@ public class KeyEntity extends Mob {
             this.noPhysics = false;
             this.refreshDimensions();
         }
-        if (!this.level().isClientSide) {
-            ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
+        if (!this.level.isClientSide) {
+            ((ServerLevel) this.level).sendParticles(ParticleTypes.END_ROD,
                     this.getX(), this.getY() + 1.0, this.getZ(),
                     20, 0.3, 0.3, 0.3, 0.01);
             this.updateDataToManager();
@@ -297,7 +297,7 @@ public class KeyEntity extends Mob {
     public void onAddedToWorld() {
         super.onAddedToWorld();
 
-        if (!this.level().isClientSide && this.level() instanceof ServerLevel serverLevel) {
+        if (!this.level.isClientSide && this.level instanceof ServerLevel serverLevel) {
             KeyEntityManager manager = KeyEntityManager.get(serverLevel);
             KeyEntityManager.KeyEntityData data = manager.get(this.getUUID());
 
@@ -307,7 +307,7 @@ public class KeyEntity extends Mob {
                 this.updatedStateTime = data.updatedTime();
                 this.summonedMobRL = data.summonedMobRL();
                 this.entityData.set(DATA_STATE, this.state.ordinal());
-                this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+                this.entityData.set(UPDATED_STATE_TIME, String.valueOf(this.updatedStateTime));
             }
         }
     }

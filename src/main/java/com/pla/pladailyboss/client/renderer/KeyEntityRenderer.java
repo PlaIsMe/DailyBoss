@@ -1,21 +1,20 @@
 package com.pla.pladailyboss.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
+import com.mojang.math.Vector3f;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.entity.KeyEntity;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.init.BlockInit;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.logging.log4j.LogManager;
@@ -33,7 +32,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
 
     @Override
     public @NotNull ResourceLocation getTextureLocation(@NotNull KeyEntity pEntity) {
-        return new ResourceLocation(PlaDailyBoss.MOD_ID, "textures/entity/key_entity.png");
+        return ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/entity/key_entity.png");
     }
 
     @Override
@@ -47,32 +46,31 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
 
         if (pEntity.getState() == KeyEntityState.NORMAL) {
-            Level level = pEntity.level();
+            Level level = pEntity.level;
             int packedLight = LightTexture.pack(15, 15);
             double relativeGameTime = level.getGameTime() + pPartialTicks;
             double offset = Math.sin(relativeGameTime / 10.0) / 20.0;
 
             pPoseStack.pushPose();
             pPoseStack.translate(0, 3.5 + offset, 0);
-            pPoseStack.mulPose(Axis.ZP.rotationDegrees(45.0f));
+            pPoseStack.mulPose(Vector3f.ZP.rotationDegrees(45.0f));
 
             float spin = (float) ((relativeGameTime * 4) % 360);
-            pPoseStack.mulPose(Axis.XP.rotationDegrees(spin));
+            pPoseStack.mulPose(Vector3f.XP.rotationDegrees(spin));
             this.context.getItemRenderer().renderStatic(
                     new ItemStack(BlockInit.SPINNING_BLOCK.get()),
-                    ItemDisplayContext.FIXED,
+                    ItemTransforms.TransformType.FIXED,
                     packedLight,
                     OverlayTexture.NO_OVERLAY,
                     pPoseStack,
                     pBuffer,
-                    level,
                     0
             );
 
             pPoseStack.popPose();
         } else {
-            long updatedTime = pEntity.getUpdatedStateTime();
-            long remaining = pEntity.getRechargeCooldown() - (System.currentTimeMillis() - updatedTime);
+            long updatedTime = Long.parseLong(pEntity.getUpdatedStateTime());
+            long remaining = Long.parseLong(pEntity.getRechargeCooldown()) - (System.currentTimeMillis() - updatedTime);
 
             if (remaining > 0) {
                 long seconds = (remaining / 1000) % 60;
@@ -93,7 +91,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
                         false,
                         pPoseStack.last().pose(),
                         pBuffer,
-                        Font.DisplayMode.NORMAL,
+                        false,
                         0,
                         LightTexture.FULL_BRIGHT
                 );

@@ -10,7 +10,7 @@ import java.util.Optional;
 public class NetworkHandler {
     private static final String PROTOCOL_VERSION = "1";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation("pladailyboss", "main"),
+            ResourceLocation.fromNamespaceAndPath("pladailyboss", "main"),
             () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals
