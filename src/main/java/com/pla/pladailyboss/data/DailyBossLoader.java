@@ -68,8 +68,8 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 continue;
             }
 
-            ResourceLocation mobId = ResourceLocation.fromNamespaceAndPath(namespace, mobPath);
-            if (!ForgeRegistries.ENTITY_TYPES.containsKey(mobId)) {
+            ResourceLocation mobId = new ResourceLocation(namespace, mobPath);
+            if (!ForgeRegistries.ENTITIES.containsKey(mobId)) {
                 LOGGER.warn("[DailyBoss] Skipping '{}' because entity '{}' is not registered.", id, mobId);
                 continue;
             }
@@ -98,8 +98,7 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return BOSS_LOOT_TABLES.keySet().stream()
                 .filter(mobId -> {
                     // Memory Check
-                    String[] parts = mobId.split(":");
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]));
+                    EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(mobId));
                     if (entityType != null) {
                         int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
                         if (inMemoryKillCount > 0) {
@@ -119,10 +118,8 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 .map(entry -> {
                     String mobIdStr = entry.getKey();
                     BossLootData data = entry.getValue();
-
-                    String[] parts = mobIdStr.split(":");
-                    ResourceLocation mobId = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
-                    EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(mobId);
+                    ResourceLocation mobId = new ResourceLocation(mobIdStr);
+                    EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(mobId);
 
                     if (entityType == null) {
                         return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED, data.message);

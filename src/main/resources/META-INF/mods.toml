@@ -14,24 +14,24 @@ Pla made this mod for adding daily boss to Minecraft.
 [[dependencies.pladailyboss]]
     modId="forge"
     mandatory=true
-    versionRange="[43.5.0,)"
+    versionRange="[40.2.21,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.pladailyboss]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.19.2,)"
+    versionRange="[1.18.2,)"
     ordering="NONE"
     side="BOTH"
 [[dependencies.pladailyboss]]
     modId="ftbchunks"
     mandatory=true
-    versionRange="[1902.4.7,)"
+    versionRange="[1802.3.5,)"
     ordering="AFTER"
     side="BOTH"
 [[dependencies.pladailyboss]]
     modId="experimentalsettingsdisabler"
     mandatory=false
-    versionRange="[1.0,)"
+    versionRange="[4.0,)"
     ordering="NONE"
     side="BOTH"

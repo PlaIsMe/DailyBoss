@@ -26,14 +26,14 @@ public class PlaDailyBoss
     public static final String MOD_ID = "pladailyboss";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public PlaDailyBoss(FMLJavaModLoadingContext context) {
-        IEventBus modEventBus = context.getModEventBus();
+    public PlaDailyBoss() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
         EntityInit.ENTITY_TYPES.register(modEventBus);
         BlockInit.BLOCKS.register(modEventBus);
         ItemInit.ITEMS.register(modEventBus);
         NetworkHandler.register();
-        context.registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "dailyboss-server.toml");
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC, "dailyboss-server.toml");
         MinecraftForge.EVENT_BUS.register(new DailyBossReloadListener());
     }
 

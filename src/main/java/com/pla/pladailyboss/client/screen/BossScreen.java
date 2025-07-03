@@ -12,12 +12,15 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
+import net.minecraft.network.chat.TranslatableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,12 +28,12 @@ public class BossScreen extends Screen {
     private static final Logger LOGGER = LogManager.getLogger();
     private static BossScreen instance;
     private static final Component TITLE =
-            Component.translatable("gui." + PlaDailyBoss.MOD_ID + ".boss_screen");
+            new TranslatableComponent("gui." + PlaDailyBoss.MOD_ID + ".boss_screen");
 
     private static final String posterPath = "textures/gui/entity_posters/";
 
     private static final ResourceLocation BACKGROUND =
-            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/screen_background.png");
+            new ResourceLocation(PlaDailyBoss.MOD_ID, "textures/gui/screen_background.png");
 
     private int currentPage;
     private int totalPages;
@@ -85,7 +88,7 @@ public class BossScreen extends Screen {
                 bgTop - BUTTON_SIZE,
                 BUTTON_SIZE * 5,
                 BUTTON_SIZE,
-                Component.literal("Daily Boss List"),
+                new TextComponent("Daily Boss List"),
                 this::doNothing
         ));
 
@@ -94,7 +97,7 @@ public class BossScreen extends Screen {
                 bgBottom + PADDING_VERTICAL / 2,
                 BUTTON_SIZE,
                 BUTTON_SIZE,
-                Component.literal("<"),
+                new TextComponent("<"),
                 this::handlePrevPage
         ));
 
@@ -103,7 +106,7 @@ public class BossScreen extends Screen {
                 bgBottom + PADDING_VERTICAL / 2,
                 BUTTON_SIZE * 2,
                 BUTTON_SIZE,
-                Component.literal(currentPage + "/" + totalPages),
+                new TextComponent(currentPage + "/" + totalPages),
                 this::doNothing
         ));
 
@@ -112,22 +115,27 @@ public class BossScreen extends Screen {
                 bgBottom + PADDING_VERTICAL / 2,
                 BUTTON_SIZE,
                 BUTTON_SIZE,
-                Component.literal(">"),
+                new TextComponent(">"),
                 this::handleNextPage
         ));
     }
 
     public boolean textureExists(ResourceLocation location) {
         ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
-        return resourceManager.getResource(location).isPresent();
+        try {
+            resourceManager.getResource(location);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private void drawEntityCard(PoseStack poseStack, int x, int y, BossEntry bossEntry) {
         String prefixImage = (bossEntry.state == BossEntryState.DEFEAT ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_corrupted" : "_disabled.png"));
         String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
-        ResourceLocation entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, entityPoster);
+        ResourceLocation entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {
-            entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
+            entityCardTexture = new ResourceLocation(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
         }
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, entityCardTexture);
@@ -188,14 +196,14 @@ public class BossScreen extends Screen {
         if (currentPage > 1) {
             currentPage--;
         }
-        pageButton.setMessage(Component.literal(currentPage + "/" + totalPages));
+        pageButton.setMessage(new TextComponent(currentPage + "/" + totalPages));
     }
 
     private void handleNextPage(Button button) {
         if (currentPage < totalPages) {
             currentPage++;
         }
-        pageButton.setMessage(Component.literal(currentPage + "/" + totalPages));
+        pageButton.setMessage(new TextComponent(currentPage + "/" + totalPages));
     }
 
     private void doNothing(Button button) {

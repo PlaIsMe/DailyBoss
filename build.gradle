@@ -17,13 +17,13 @@ apply plugin: 'net.minecraftforge.gradle'
 
 version = '1.0'
 group = 'com.pla.pladailyboss'
-archivesBaseName = 'DailyBoss-1.19.2'
+archivesBaseName = 'DailyBoss-1.18.2'
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
-    mappings channel: 'official', version: '1.19.2'
+    mappings channel: 'official', version: '1.18.2'
     runs {
         client {
             workingDirectory project.file('run')
@@ -90,10 +90,10 @@ repositories {
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.19.2-43.5.0'
-    implementation fg.deobf("curse.maven:ftbchunks-314906:5710631")
-    implementation fg.deobf("curse.maven:ftblibrary-404465:4661834")
-    implementation fg.deobf("curse.maven:ftbteams-404468:4611938")
+    minecraft 'net.minecraftforge:forge:1.18.2-40.2.21'
+    implementation fg.deobf("curse.maven:ftbchunks-314906:5423717")
+    implementation fg.deobf("curse.maven:ftblibrary-404465:4396792")
+    implementation fg.deobf("curse.maven:ftbteams-404468:4579981")
 }
 
 jar {

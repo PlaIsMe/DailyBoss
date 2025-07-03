@@ -13,6 +13,7 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextComponent;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -136,10 +137,9 @@ public class KeyEntity extends Mob {
                     List<String> lootTables = data != null ? data.lootTables : Collections.emptyList();
                     for (int i = 0; i < 5; i++) {
                         String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
-                        String[] parts = lootTableId.split(":");
                         RewardEvent.dropLoot(
                             (ServerLevel) level,
-                            ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]),
+                            new ResourceLocation(lootTableId),
                             this.getOnPos(),
                             1
                         );
@@ -168,7 +168,7 @@ public class KeyEntity extends Mob {
                 long minutes = (remaining / (1000 * 60)) % 60;
                 long hours = remaining / (1000 * 60 * 60);
                 player.displayClientMessage(
-                        Component.literal("Come back after " + hours + "h " + minutes + "m " + seconds + "s")
+                        new TextComponent("Come back after " + hours + "h " + minutes + "m " + seconds + "s")
                                 .withStyle(style -> style.withColor(0xFFFF00)),
                         true
                 );
@@ -182,16 +182,15 @@ public class KeyEntity extends Mob {
             List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
             if (mobIds.isEmpty()) {
                 player.displayClientMessage(
-                        Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
+                        new TextComponent("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
                                 .withStyle(style -> style.withColor(0xFFFF00)),
                         true
                 );
                 return InteractionResult.PASS;
             }
             String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
-            String[] parts = selectedMobId.split(":");
-            ResourceLocation mobRL = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
-            EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
+            ResourceLocation mobRL = new ResourceLocation(selectedMobId);
+            EntityType<?> type = ForgeRegistries.ENTITIES.getValue(mobRL);
 
             boolean usedCustomNBT = false;
 
@@ -216,7 +215,7 @@ public class KeyEntity extends Mob {
                                 summonedMobId = loadedMob.getUUID();
                                 usedCustomNBT = true;
                             } else {
-                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
+                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITIES.getKey(loaded.getType()));
                             }
                         } else {
                             LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);

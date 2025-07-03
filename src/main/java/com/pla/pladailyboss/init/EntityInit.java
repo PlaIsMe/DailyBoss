@@ -11,7 +11,7 @@ import net.minecraftforge.registries.RegistryObject;
 
 public class EntityInit {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
-            DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, PlaDailyBoss.MOD_ID);
+            DeferredRegister.create(ForgeRegistries.ENTITIES, PlaDailyBoss.MOD_ID);
 
     public static final RegistryObject<EntityType<KeyEntity>> KEY_ENTITY =
             ENTITY_TYPES.register("key_entity", () -> EntityType.Builder.of(KeyEntity::new, MobCategory.CREATURE)

@@ -32,7 +32,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
 
     @Override
     public @NotNull ResourceLocation getTextureLocation(@NotNull KeyEntity pEntity) {
-        return ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/entity/key_entity.png");
+        return  new ResourceLocation(PlaDailyBoss.MOD_ID, "textures/entity/key_entity.png");
     }
 
     @Override
