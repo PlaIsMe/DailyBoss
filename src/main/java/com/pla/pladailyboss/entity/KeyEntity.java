@@ -1,6 +1,6 @@
 package com.pla.pladailyboss.entity;
 
-//import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.data.BossLootData;
@@ -233,13 +233,13 @@ public class KeyEntity extends Mob {
                 level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
                 summonedMobRL = selectedMobId;
                 setState(KeyEntityState.DISAPPEARED);
-//                ClaimChunkHelper claimChunkHelper = null;
-//                try {
-//                    claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
-//                    claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
-//                } catch (CommandSyntaxException e) {
-//                    throw new RuntimeException(e);
-//                }
+                ClaimChunkHelper claimChunkHelper = null;
+                try {
+                    claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
+                    claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
+                } catch (CommandSyntaxException e) {
+                    throw new RuntimeException(e);
+                }
                 return InteractionResult.SUCCESS;
             }
         }
