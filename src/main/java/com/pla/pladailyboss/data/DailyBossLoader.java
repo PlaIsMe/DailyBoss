@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pla.pladailyboss.enums.BossEntryState;
+import com.pla.pladailyboss.enums.BossLootDataState;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -54,6 +55,7 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
             JsonElement element = entry.getValue();
 
             List<String> lootTables = parseLootTables(element);
+            BossLootDataState bossLootDataState = BossLootDataState.AVAILABLE;
 
             String[] splitPath = id.getPath().split("/", 2);
             if (splitPath.length < 2) {
@@ -64,39 +66,26 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
             String mobPath = splitPath[1];
 
             if (!ModList.get().isLoaded(namespace)) {
-                LOGGER.warn("[DailyBoss] Skipping '{}' because mod '{}' is not loaded.", id, namespace);
-                continue;
+                bossLootDataState = BossLootDataState.UN_AVAILABLE;
             }
 
-            ResourceLocation mobId = new ResourceLocation(namespace, mobPath);
-            if (!ForgeRegistries.ENTITIES.containsKey(mobId)) {
-                LOGGER.warn("[DailyBoss] Skipping '{}' because entity '{}' is not registered.", id, mobId);
-                continue;
-            }
+            String mobId = String.format("%s:%s", namespace, mobPath);
 
             JsonObject obj = element.getAsJsonObject();
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
-            JsonElement messageElement = obj.get("message");
-            String message = messageElement != null && messageElement.isJsonPrimitive()
-                    ? messageElement.getAsString()
-                    : "";
-
-            BOSS_LOOT_TABLES.put(mobId.toString(), new BossLootData(lootTables, nbt, message));
+            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState));
         }
-
-        LOGGER.info("[DailyBoss] Loaded loot table map:");
-        BOSS_LOOT_TABLES.forEach((mob, data) -> {
-            LOGGER.info("Mob: {}", mob);
-            data.lootTables.forEach(loot -> LOGGER.info("  -> {}", loot));
-            if (!data.nbt.entrySet().isEmpty()) {
-                LOGGER.info("  NBT: {}", data.nbt);
-            }
-        });
     }
 
     public static List<String> getListBasedOnKilledMob(ServerPlayer player, MinecraftServer server) {
-        return BOSS_LOOT_TABLES.keySet().stream()
+        return BOSS_LOOT_TABLES.entrySet().stream()
+                .filter(entry -> entry.getValue().state == BossLootDataState.AVAILABLE)
+                .map(Map.Entry::getKey)
                 .filter(mobId -> {
+                    // Unlock by default
+                    if (Objects.equals(mobId, "brutalbosses:randomboss")) {
+                        return true;
+                    }
                     // Memory Check
                     EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(new ResourceLocation(mobId));
                     if (entityType != null) {
@@ -117,29 +106,45 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return BOSS_LOOT_TABLES.entrySet().stream()
                 .map(entry -> {
                     String mobIdStr = entry.getKey();
+
                     BossLootData data = entry.getValue();
+                    if (data.state == BossLootDataState.UN_AVAILABLE) {
+                        return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED);
+                    }
+
+                    if (Objects.equals(mobIdStr, "brutalbosses:randomboss")) {
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEATED);
+                    }
+
+                    String[] parts = mobIdStr.split(":");
                     ResourceLocation mobId = new ResourceLocation(mobIdStr);
                     EntityType<?> entityType = ForgeRegistries.ENTITIES.getValue(mobId);
-
                     if (entityType == null) {
-                        return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED, data.message);
+                        return new BossEntry(mobIdStr, BossEntryState.NOT_INSTALLED);
                     }
 
                     int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
                     if (inMemoryKillCount > 0) {
-                        return new BossEntry(mobIdStr, BossEntryState.DEFEAT, data.message);
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEATED);
                     }
 
                     int fromFile = StatsReader.getMobKillCountFromStatsFile(server, player, mobIdStr);
                     if (fromFile > 0) {
-                        return new BossEntry(mobIdStr, BossEntryState.DEFEAT, data.message);
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEATED);
                     }
 
-                    return new BossEntry(mobIdStr, BossEntryState.NOT_DEFEAT, data.message);
+                    return new BossEntry(mobIdStr, BossEntryState.UNDEFEATED);
                 })
+                .sorted(Comparator.comparingInt(entry -> getSortPriority(entry.state)))
                 .collect(Collectors.toList());
     }
 
-
+    private static int getSortPriority(BossEntryState state) {
+        return switch (state) {
+            case DEFEATED -> 0;
+            case UNDEFEATED -> 1;
+            case NOT_INSTALLED -> 2;
+        };
+    }
 }
 

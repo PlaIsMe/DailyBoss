@@ -28,7 +28,6 @@ public class BossListMessage {
         for (BossEntry entry : msg.bossList) {
             buf.writeUtf(entry.name);
             buf.writeEnum(entry.state);
-            buf.writeUtf(entry.message);
         }
     }
 
@@ -37,9 +36,8 @@ public class BossListMessage {
         List<BossEntry> bossList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             String name = buf.readUtf();
-            BossEntryState state = buf.readEnum(BossEntryState.class); // read enum
-            String message = buf.readUtf();
-            bossList.add(new BossEntry(name, state, message));
+            BossEntryState state = buf.readEnum(BossEntryState.class);
+            bossList.add(new BossEntry(name, state));
         }
         return new BossListMessage(bossList);
     }
