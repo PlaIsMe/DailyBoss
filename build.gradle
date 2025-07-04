@@ -91,6 +91,7 @@ repositories {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.19.2-43.5.0'
+    implementation fg.deobf("curse.maven:brutal-bosses-dungeon-557999:5157159")
     implementation fg.deobf("curse.maven:ftbchunks-314906:5710631")
     implementation fg.deobf("curse.maven:ftblibrary-404465:4661834")
     implementation fg.deobf("curse.maven:ftbteams-404468:4611938")

@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class BossScreen extends Screen {
@@ -36,8 +35,6 @@ public class BossScreen extends Screen {
     private int totalPages;
     private Button pageButton;
     private List<BossEntry> entityIdStrings;
-
-
 
     private static final int BOX_WIDTH = 60;
     private static final int BOX_HEIGHT = 80;
@@ -123,7 +120,7 @@ public class BossScreen extends Screen {
     }
 
     private void drawEntityCard(PoseStack poseStack, int x, int y, BossEntry bossEntry) {
-        String prefixImage = (bossEntry.state == BossEntryState.DEFEAT ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_corrupted" : "_disabled.png"));
+        String prefixImage = (bossEntry.state == BossEntryState.DEFEATED ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_missing.png" : "_disabled.png"));
         String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
         ResourceLocation entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {
