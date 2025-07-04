@@ -21,13 +21,17 @@ import java.util.List;
 public class BossScreen extends Screen {
     private static final Logger LOGGER = LogManager.getLogger();
     private static BossScreen instance;
-    private static final Component TITLE =
-            Component.translatable("gui." + PlaDailyBoss.MOD_ID + ".boss_screen");
 
     private static final String posterPath = "textures/gui/entity_posters/";
 
+    private static final ResourceLocation TITLE =
+            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/element/title.png");
+
     private static final ResourceLocation BACKGROUND =
-            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/screen_background.png");
+            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/element/screen_background.png");
+
+    private static final ResourceLocation FRAME =
+            ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, "textures/gui/element/frame.png");
 
     private int currentPage;
     private int totalPages;
@@ -36,16 +40,16 @@ public class BossScreen extends Screen {
 
 
 
-    private static final int BOX_WIDTH = 60;
-    private static final int BOX_HEIGHT = 80;
+    private static final int BOX_WIDTH = 90;
+    private static final int BOX_HEIGHT = 120;
     private static final int GUI_WIDTH = 512;
     private static final int GUI_HEIGHT = 320;
-    private static final int PADDING_HORIZONTAL = 5;
-    private static final int PADDING_VERTICAL = 4;
+    private static final int PADDING_HORIZONTAL = 20;
+    private static final int PADDING_VERTICAL = 5;
     private static final int BUTTON_SIZE = 20;
 
     public BossScreen() {
-        super(TITLE);
+        super(Component.translatable("gui." + PlaDailyBoss.MOD_ID + ".boss_screen"));
         instance = this;
         PacketDistributor.sendToServer(new AskForDataMessage(""));
     }
@@ -79,30 +83,23 @@ public class BossScreen extends Screen {
 
         addRenderableWidget(
                 Button.builder(
-                                Component.literal("Daily Boss List"),
-                                this::doNothing)
-                        .bounds(bgLeft + (bgWidth - BUTTON_SIZE * 5) / 2, bgTop - BUTTON_SIZE, BUTTON_SIZE * 5, BUTTON_SIZE)
-                        .build());
-
-        addRenderableWidget(
-                Button.builder(
                                 Component.literal("<"),
                                 this::handlePrevPage)
-                        .bounds(bgRight - BUTTON_SIZE * 4 - PADDING_HORIZONTAL, bgBottom + PADDING_VERTICAL / 2, BUTTON_SIZE, BUTTON_SIZE)
+                        .bounds(bgRight - BUTTON_SIZE * 4 - PADDING_HORIZONTAL - 30, bgBottom - 30, BUTTON_SIZE, BUTTON_SIZE)
                         .build());
 
         pageButton = addRenderableWidget(
                 Button.builder(
                                 Component.literal(currentPage + "/" + totalPages),
                                 this::doNothing)
-                        .bounds(bgRight - BUTTON_SIZE * 3 - PADDING_HORIZONTAL, bgBottom + PADDING_VERTICAL / 2, BUTTON_SIZE * 2, BUTTON_SIZE)
+                        .bounds(bgRight - BUTTON_SIZE * 3 - PADDING_HORIZONTAL- 30, bgBottom - 30, BUTTON_SIZE * 2, BUTTON_SIZE)
                         .build());
 
         addRenderableWidget(
                 Button.builder(
                                 Component.literal(">"),
                                 this::handleNextPage)
-                        .bounds(bgRight - BUTTON_SIZE - PADDING_HORIZONTAL, bgBottom + PADDING_VERTICAL / 2, BUTTON_SIZE, BUTTON_SIZE)
+                        .bounds(bgRight - BUTTON_SIZE - PADDING_HORIZONTAL- 30, bgBottom - 30, BUTTON_SIZE, BUTTON_SIZE)
                         .build());
     }
 
@@ -118,8 +115,16 @@ public class BossScreen extends Screen {
         if (!textureExists(entityCardTexture)) {
             entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, posterPath + "not_found/not_found" + prefixImage);
         }
+        int imagePadding = 5;
         guiGraphics.blit(
                 entityCardTexture,
+                x + imagePadding, y + imagePadding,
+                0, 0,
+                BOX_WIDTH - imagePadding * 2, BOX_HEIGHT - imagePadding * 2,
+                BOX_WIDTH - imagePadding * 2, BOX_HEIGHT - imagePadding * 2
+        );
+        guiGraphics.blit(
+                FRAME,
                 x, y,
                 0, 0,
                 BOX_WIDTH, BOX_HEIGHT,
@@ -137,6 +142,15 @@ public class BossScreen extends Screen {
         guiGraphics.blit(BACKGROUND, bgLeft, bgTop, 0, 0, bgWidth, bgHeight, bgWidth, bgHeight);
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+        int titleWidth = 100;
+        int titleHeight = 18;
+        guiGraphics.blit(
+                TITLE,
+                bgLeft + (GUI_WIDTH - titleWidth) / 2, bgTop + 22,
+                0, 0,
+                titleWidth, titleHeight,
+                titleWidth, titleHeight
+        );
 
         if (this.entityIdStrings == null) return;
 
@@ -147,8 +161,7 @@ public class BossScreen extends Screen {
 
         int usableHeight = GUI_HEIGHT - 2 * PADDING_VERTICAL;
         int maxRows = usableHeight / (BOX_HEIGHT + PADDING_VERTICAL);
-        int totalHeight = maxRows * BOX_HEIGHT + (maxRows - 1) * PADDING_VERTICAL;
-        int startY = bgTop + (GUI_HEIGHT - totalHeight) / 2;
+        int startY = bgTop + 40;
 
         int entitiesPerPage = maxRows * maxColumns;
         totalPages = Math.max(1, (int) Math.ceil(entityIdStrings.size() / (double) entitiesPerPage));
@@ -162,7 +175,7 @@ public class BossScreen extends Screen {
             int row = i / maxColumns;
 
             int x = startX + col * (BOX_WIDTH + PADDING_HORIZONTAL);
-            int y = startY + row * (BOX_HEIGHT + PADDING_HORIZONTAL);
+            int y = startY + row * (BOX_HEIGHT + PADDING_VERTICAL);
 
             drawEntityCard(guiGraphics, x, y, entitiesToRender.get(i));
         }
