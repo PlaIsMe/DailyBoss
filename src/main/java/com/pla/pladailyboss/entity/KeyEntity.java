@@ -2,14 +2,14 @@ package com.pla.pladailyboss.entity;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
-import com.pla.pladailyboss.compat.BrutalBossesCompat;
+//import com.pla.pladailyboss.compat.BrutalBossesCompat;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.data.BossLootData;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.data.KeyEntityManager;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
-import com.pla.pladailyboss.ftb.ClaimChunkHelper;
+//import com.pla.pladailyboss.ftb.ClaimChunkHelper;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -158,13 +158,13 @@ public class KeyEntity extends Mob {
     }
 
     private void entityClaimChunk(@NotNull Player player) {
-        ClaimChunkHelper claimChunkHelper = null;
-        try {
-            claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
-            claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
-        } catch (CommandSyntaxException e) {
-            throw new RuntimeException(e);
-        }
+//        ClaimChunkHelper claimChunkHelper = null;
+//        try {
+//            claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
+//            claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
+//        } catch (CommandSyntaxException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
     private boolean spawnBoss(@NotNull Player player) {
@@ -179,14 +179,14 @@ public class KeyEntity extends Mob {
         }
         String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
 
-        if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
-            summonedMobId = Objects.requireNonNull(BrutalBossesCompat.spawnRandomBossAndReturn((ServerLevel) this.level(), this.getOnPos())).getUUID();
-            level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-            summonedMobRL = selectedMobId;
-            setState(KeyEntityState.DISAPPEARED);
-            entityClaimChunk(player);
-            return true;
-        }
+//        if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
+//            summonedMobId = Objects.requireNonNull(BrutalBossesCompat.spawnRandomBossAndReturn((ServerLevel) this.level(), this.getOnPos())).getUUID();
+//            level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+//            summonedMobRL = selectedMobId;
+//            setState(KeyEntityState.DISAPPEARED);
+//            entityClaimChunk(player);
+//            return true;
+//        }
 
         ResourceLocation mobRL = new ResourceLocation(selectedMobId);
         EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);

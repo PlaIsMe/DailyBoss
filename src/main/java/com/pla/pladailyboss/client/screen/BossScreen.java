@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class BossScreen extends Screen {
@@ -32,7 +33,37 @@ public class BossScreen extends Screen {
     private int currentPage;
     private int totalPages;
     private Button pageButton;
-    private List<BossEntry> entityIdStrings;
+    private static List<BossEntry> entityIdStrings = new ArrayList<>();
+
+    static {
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.NOT_INSTALLED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.NOT_INSTALLED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:wither", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("minecraft:warden", BossEntryState.UNDEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.NOT_INSTALLED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.NOT_INSTALLED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.NOT_INSTALLED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.DEFEATED));
+        entityIdStrings.add(new BossEntry("brutalbosses:randomboss", BossEntryState.DEFEATED));
+    }
 
     private static final int BOX_WIDTH = 60;
     private static final int BOX_HEIGHT = 80;
@@ -45,7 +76,7 @@ public class BossScreen extends Screen {
     public BossScreen() {
         super(TITLE);
         instance = this;
-        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
+//        NetworkHandler.INSTANCE.sendToServer(new AskForDataMessage());
     }
 
     public static BossScreen getInstance() {

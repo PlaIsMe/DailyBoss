@@ -19,9 +19,9 @@ description='''${mod_description}'''
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
-[[dependencies.pladailyboss]]
-    modId="ftbchunks"
-    mandatory=true
-    versionRange="[2001.3.6,)"
-    ordering="AFTER"
-    side="BOTH"
+#[[dependencies.pladailyboss]]
+#    modId="ftbchunks"
+#    mandatory=true
+#    versionRange="[2001.3.6,)"
+#    ordering="AFTER"
+#    side="BOTH"
