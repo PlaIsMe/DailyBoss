@@ -2,6 +2,7 @@ package com.pla.pladailyboss.entity;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
+import com.pla.pladailyboss.compat.BrutalBossesCompat;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.data.BossLootData;
 import com.pla.pladailyboss.data.DailyBossLoader;
@@ -152,12 +153,93 @@ public class KeyEntity extends Mob {
                         this.getOnPos().getZ() + 0.5,
                         xpAmount
                     ));
-
-
                 }
             }
         }
     }
+
+    private void entityClaimChunk(@NotNull Player player) {
+        ClaimChunkHelper claimChunkHelper = null;
+        try {
+            claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
+            claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
+        } catch (CommandSyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean spawnBoss(@NotNull Player player) {
+        List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
+        if (mobIds.isEmpty()) {
+            player.displayClientMessage(
+                    Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
+                            .withStyle(style -> style.withColor(0xFFFF00)),
+                    true
+            );
+            return false;
+        }
+        String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
+
+        if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
+            summonedMobId = Objects.requireNonNull(BrutalBossesCompat.spawnRandomBossAndReturn((ServerLevel) this.level(), this.getOnPos())).getUUID();
+            level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+            summonedMobRL = selectedMobId;
+            setState(KeyEntityState.DISAPPEARED);
+            entityClaimChunk(player);
+            return true;
+        }
+
+        String[] parts = selectedMobId.split(":", 2);
+        ResourceLocation mobRL = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
+        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(mobRL);
+
+        boolean usedCustomNBT = false;
+
+        if (type != null && type.create(level()) instanceof Mob mob) {
+            BossLootData lootData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
+            if (lootData != null && lootData.nbt != null && !lootData.nbt.entrySet().isEmpty()) {
+                CompoundTag tag = CompoundTag.CODEC.parse(JsonOps.INSTANCE, lootData.nbt)
+                        .resultOrPartial(msg -> LOGGER.warn("[Daily Boss] Failed to parse NBT for mob {}: {}", selectedMobId, msg))
+                        .orElse(new CompoundTag());
+                if (!tag.isEmpty()) {
+                    tag.putString("id", selectedMobId);
+                    Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
+                        e.setPos(this.getX(), this.getY(), this.getZ());
+                        return e;
+                    });
+
+                    if (loaded != null) {
+                        if (loaded instanceof Mob loadedMob) {
+                            loadedMob.setPersistenceRequired();
+                            loadedMob.setTarget(player);
+                            level().addFreshEntity(loadedMob);
+                            summonedMobId = loadedMob.getUUID();
+                            usedCustomNBT = true;
+                        } else {
+                            LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", BuiltInRegistries.ENTITY_TYPE.getKey(loaded.getType()));
+                        }
+                    } else {
+                        LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);
+                    }
+                }
+            }
+            if (!usedCustomNBT){
+                mob.setPos(this.getX(), this.getY(), this.getZ());
+                mob.setPersistenceRequired();
+                mob.setTarget(player);
+                level().addFreshEntity(mob);
+                summonedMobId = mob.getUUID();
+            }
+            level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
+            summonedMobRL = selectedMobId;
+            setState(KeyEntityState.DISAPPEARED);
+            entityClaimChunk(player);
+            return true;
+        }
+
+        return false;
+    }
+
 
     @Override
     protected @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
@@ -179,68 +261,10 @@ public class KeyEntity extends Mob {
                 return InteractionResult.PASS;
             }
 
-            List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
-            if (mobIds.isEmpty()) {
-                player.displayClientMessage(
-                        Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
-                                .withStyle(style -> style.withColor(0xFFFF00)),
-                        true
-                );
-                return InteractionResult.PASS;
-            }
-            String selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
-            String[] parts = selectedMobId.split(":", 2);
-            ResourceLocation mobRL = ResourceLocation.fromNamespaceAndPath(parts[0], parts[1]);
-            EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(mobRL);
-
-            boolean usedCustomNBT = false;
-
-            if (type != null && type.create(level()) instanceof Mob mob) {
-                BossLootData lootData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
-                if (lootData != null && lootData.nbt != null && !lootData.nbt.entrySet().isEmpty()) {
-                    CompoundTag tag = CompoundTag.CODEC.parse(JsonOps.INSTANCE, lootData.nbt)
-                            .resultOrPartial(msg -> LOGGER.warn("[Daily Boss] Failed to parse NBT for mob {}: {}", selectedMobId, msg))
-                            .orElse(new CompoundTag());
-                    if (!tag.isEmpty()) {
-                        tag.putString("id", selectedMobId);
-                        Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
-                            e.setPos(this.getX(), this.getY(), this.getZ());
-                            return e;
-                        });
-
-                        if (loaded != null) {
-                            if (loaded instanceof Mob loadedMob) {
-                                loadedMob.setPersistenceRequired();
-                                loadedMob.setTarget(player);
-                                level().addFreshEntity(loadedMob);
-                                summonedMobId = loadedMob.getUUID();
-                                usedCustomNBT = true;
-                            } else {
-                                LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", BuiltInRegistries.ENTITY_TYPE.getKey(loaded.getType()));
-                            }
-                        } else {
-                            LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);
-                        }
-                    }
-                }
-                if (!usedCustomNBT){
-                    mob.setPos(this.getX(), this.getY(), this.getZ());
-                    mob.setPersistenceRequired();
-                    mob.setTarget(player);
-                    level().addFreshEntity(mob);
-                    summonedMobId = mob.getUUID();
-                }
-                level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-                summonedMobRL = selectedMobId;
-                setState(KeyEntityState.DISAPPEARED);
-                ClaimChunkHelper claimChunkHelper = null;
-                try {
-                    claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
-                    claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
-                } catch (CommandSyntaxException e) {
-                    throw new RuntimeException(e);
-                }
+            if (spawnBoss(player)) {
                 return InteractionResult.SUCCESS;
+            } else {
+                return InteractionResult.PASS;
             }
         }
 

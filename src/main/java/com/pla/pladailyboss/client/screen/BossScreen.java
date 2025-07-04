@@ -112,7 +112,7 @@ public class BossScreen extends Screen {
     }
 
     private void drawEntityCard(GuiGraphics guiGraphics, int x, int y, BossEntry bossEntry) {
-        String prefixImage = (bossEntry.state == BossEntryState.DEFEAT ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_corrupted" : "_disabled.png"));
+        String prefixImage = (bossEntry.state == BossEntryState.DEFEATED ? "_enabled.png" : (bossEntry.state == BossEntryState.NOT_INSTALLED ? "_missing.png" : "_disabled.png"));
         String entityPoster = posterPath + bossEntry.name.replace(":", "/") + "/" + bossEntry.name.split(":")[1] + prefixImage;
         ResourceLocation entityCardTexture = ResourceLocation.fromNamespaceAndPath(PlaDailyBoss.MOD_ID, entityPoster);
         if (!textureExists(entityCardTexture)) {

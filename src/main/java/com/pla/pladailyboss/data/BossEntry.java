@@ -8,12 +8,10 @@ import net.minecraft.network.codec.StreamCodec;
 public class BossEntry {
     public final String name;
     public final BossEntryState state;
-    public final String message;
 
-    public BossEntry(String name, BossEntryState state, String message) {
+    public BossEntry(String name, BossEntryState state) {
         this.name = name;
         this.state = state;
-        this.message = message;
     }
 
     public static final StreamCodec<ByteBuf, BossEntry> STREAM_CODEC = StreamCodec.composite(
@@ -25,9 +23,6 @@ public class BossEntry {
                     BossEntryState::name
             ),
             entry -> entry.state,
-
-            ByteBufCodecs.STRING_UTF8,
-            entry -> entry.message,
 
             BossEntry::new
     );

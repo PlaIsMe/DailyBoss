@@ -83,6 +83,7 @@ repositories {
 }
 
 dependencies {
+    implementation "curse.maven:brutal-bosses-dungeon-557999:6622621"
     implementation "curse.maven:ftbchunks-314906:6504893"
     implementation "curse.maven:ftblibrary-404465:6466106"
     implementation "curse.maven:ftbteams-404468:6119437"

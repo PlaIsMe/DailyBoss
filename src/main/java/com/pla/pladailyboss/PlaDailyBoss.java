@@ -37,7 +37,7 @@ public class PlaDailyBoss
         modEventBus.addListener(NetworkRegister::register);
         modEventBus.addListener(this::registerAttributes);
 
-        modContainer.registerConfig(ModConfig.Type.COMMON, PlaDailyBossConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.SERVER, PlaDailyBossConfig.SPEC);
 
         EntityInit.register(modEventBus);
         BlockInit.register(modEventBus);

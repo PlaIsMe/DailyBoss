@@ -1,7 +1,7 @@
 package com.pla.pladailyboss.enums;
 
 public enum BossEntryState {
-    DEFEAT,
-    NOT_DEFEAT,
+    DEFEATED,
+    UNDEFEATED,
     NOT_INSTALLED
 }
