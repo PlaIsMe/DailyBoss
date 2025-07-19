@@ -13,7 +13,7 @@ public class PlaDailyBossConfig {
     public static final ModConfigSpec SPEC;
 
     public static ModConfigSpec.ConfigValue<Long> COOL_DOWN;
-
+    public static ModConfigSpec.ConfigValue<String> FORCE_SPAWN;
     static {
         COOL_DOWN = BUILDER.comment(
                         "Cooldown for daily boss, in milliseconds.",
@@ -21,6 +21,12 @@ public class PlaDailyBossConfig {
                         "Minimum: 10 seconds = 10000",
                         "Maximum: 7 days = 86400000 * 7 = 604800000")
                 .defineInRange("coolDown", 86400000L, 10000L, 604800000L);
+        FORCE_SPAWN = BUILDER.comment(
+                        "Force spawning any boss without killing it first.",
+                        "This mode is only for mod reviewers that need to review some bosses.",
+                        "Remember adding the boss id to datapack or else it will crash when you killed the boss.",
+                        "Example: minecraft:wither")
+                .define("forceSpawn", "");
         SPEC = BUILDER.build();
     }
 

@@ -83,10 +83,16 @@ repositories {
 }
 
 dependencies {
-    implementation "curse.maven:brutal-bosses-dungeon-557999:6622621"
     implementation "curse.maven:ftbchunks-314906:6504893"
     implementation "curse.maven:ftblibrary-404465:6466106"
     implementation "curse.maven:ftbteams-404468:6119437"
+
+    // Brutal bosses compat
+    implementation "curse.maven:brutal-bosses-dungeon-557999:6622621"
+
+    // Iron spell compat
+    implementation "curse.maven:irons-spells-n-spellbooks-855414:6769020"
+    implementation "curse.maven:geckolib-388172:6659026"
 }
 
 
