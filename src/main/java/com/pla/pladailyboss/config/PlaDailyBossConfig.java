@@ -10,6 +10,7 @@ public class PlaDailyBossConfig {
 
     public static ForgeConfigSpec.ConfigValue<Long> COOL_DOWN;
     public static ForgeConfigSpec.ConfigValue<String> FORCE_SPAWN;
+    public static ForgeConfigSpec.ConfigValue<Boolean> FORCE_UNLOCK;
 
     static {
         COOL_DOWN = BUILDER.comment(
@@ -24,6 +25,10 @@ public class PlaDailyBossConfig {
                         "Remember adding the boss id to datapack or else it will crash when you killed the boss.",
                         "Example: minecraft:wither")
                 .define("forceSpawn", "");
+        FORCE_UNLOCK = BUILDER.comment(
+                        "Force unlock all available bosses.",
+                        "This will break your gameplay.")
+                .define("forceUnlock", false);
         SPEC = BUILDER.build();
     }
 }
