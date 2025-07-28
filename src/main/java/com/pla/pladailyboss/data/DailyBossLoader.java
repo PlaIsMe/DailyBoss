@@ -3,6 +3,7 @@ package com.pla.pladailyboss.data;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.enums.BossEntryState;
 import com.pla.pladailyboss.enums.BossLootDataState;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -81,6 +82,11 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                 .filter(entry -> entry.getValue().state == BossLootDataState.AVAILABLE)
                 .map(Map.Entry::getKey)
                 .filter(mobId -> {
+                    // Force unlock config
+                    if (PlaDailyBossConfig.FORCE_UNLOCK.get()) {
+                        return true;
+                    }
+
                     // Unlock by default
                     if (Objects.equals(mobId, "brutalbosses:randomboss")) {
                         return true;
@@ -122,6 +128,10 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
                     String path = parts.length > 1 ? parts[1] : parts[0];
                     ResourceLocation id = ResourceLocation.fromNamespaceAndPath(namespace, path);
                     EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(id);
+
+                    if (PlaDailyBossConfig.FORCE_UNLOCK.get()) {
+                        return new BossEntry(mobIdStr, BossEntryState.DEFEATED);
+                    }
 
                     int inMemoryKillCount = player.getStats().getValue(Stats.ENTITY_KILLED.get(entityType));
                     if (inMemoryKillCount > 0) {

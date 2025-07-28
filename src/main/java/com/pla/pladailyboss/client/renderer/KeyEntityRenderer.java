@@ -56,7 +56,6 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
             pPoseStack.pushPose();
             pPoseStack.translate(0, 3.5 + offset, 0);
             pPoseStack.mulPose(Axis.ZP.rotationDegrees(45.0f));
-
             float spin = (float) ((relativeGameTime * 4) % 360);
             pPoseStack.mulPose(Axis.XP.rotationDegrees(spin));
             this.context.getItemRenderer().renderStatic(

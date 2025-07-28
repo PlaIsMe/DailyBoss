@@ -1,6 +1,5 @@
 package com.pla.pladailyboss.entity;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
 import com.pla.pladailyboss.compat.BrutalBossesCompat;
 import com.pla.pladailyboss.compat.IronsSpellBooksCompat;
@@ -9,12 +8,6 @@ import com.pla.pladailyboss.data.BossLootData;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
-import com.pla.pladailyboss.ftb.ClaimChunkHelper;
-import io.redspace.ironsspellbooks.api.util.Utils;
-import io.redspace.ironsspellbooks.entity.mobs.wizards.fire_boss.FireBossEntity;
-import io.redspace.ironsspellbooks.item.CinderousSoulcallerItem;
-import io.redspace.ironsspellbooks.registries.EntityRegistry;
-import io.redspace.ironsspellbooks.registries.ItemRegistry;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -28,7 +21,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -37,9 +29,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -52,6 +42,7 @@ public class KeyEntity extends Mob {
     private String summonedMobRL;
     private KeyEntityState state;
     private long updatedStateTime;
+    private boolean multiPhaseBoss = false;
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
     private static final Random RANDOM = new Random();
     private static final Logger LOGGER = LogManager.getLogger();
@@ -85,6 +76,7 @@ public class KeyEntity extends Mob {
         pCompound.putString("SummonedMobRL", summonedMobRL);
         pCompound.putString("KeyState", state.name());
         pCompound.putLong("UpdatedStateTime", updatedStateTime);
+        pCompound.putBoolean("MultiPhaseBoss", multiPhaseBoss);
     }
 
     @Override
@@ -110,6 +102,7 @@ public class KeyEntity extends Mob {
             this.state = KeyEntityState.NORMAL;
         }
         this.updatedStateTime = pCompound.contains("UpdatedStateTime") ? pCompound.getLong("UpdatedStateTime") : 0L;
+        this.multiPhaseBoss = pCompound.contains("MultiPhaseBoss") && pCompound.getBoolean("MultiPhaseBoss");
         this.entityData.set(DATA_STATE, this.state.ordinal());
         this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
     }
@@ -150,7 +143,7 @@ public class KeyEntity extends Mob {
                 if (entity instanceof Mob mob) {
                     double distance = this.distanceToSqr(mob);
                     if (distance > 30 * 30) {
-                        mob.teleportTo(this.getX(), this.getY() + 2.5, this.getZ());
+                        mob.teleportTo(this.getX(), this.getY(), this.getZ());
                     }
 
                     long now = System.currentTimeMillis();
@@ -159,14 +152,17 @@ public class KeyEntity extends Mob {
                         summonedMobId = null;
                         setState(KeyEntityState.NORMAL);
                     }
-                } else if (summonedMobId.equals(new UUID(0L, 0L))) {
-                    AABB area = new AABB(this.blockPosition()).inflate(2.5); // 5x5 cube
-                    List<Entity> nearby = level().getEntities(this, area, realMob ->
-                            Objects.equals(BuiltInRegistries.ENTITY_TYPE.getKey(realMob.getType()), ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "dead_king"))
-                    );
-
-                    if (!nearby.isEmpty()) {
-                        summonedMobId = nearby.get(0).getUUID();
+                } else if (multiPhaseBoss) {
+                    if (Objects.equals(summonedMobRL, "irons_spellbooks:dead_king_corpse")) {
+                        AABB area = new AABB(this.blockPosition()).inflate(2.5);
+                        List<Entity> nearby = level().getEntities(this, area, realMob ->
+                                Objects.equals(BuiltInRegistries.ENTITY_TYPE.getKey(realMob.getType()), ResourceLocation.fromNamespaceAndPath("irons_spellbooks", "dead_king"))
+                        );
+                        if (!nearby.isEmpty()) {
+                            summonedMobId = nearby.get(0).getUUID();
+                            summonedMobRL = "irons_spellbooks:dead_king";
+                            multiPhaseBoss = false;
+                        }
                     }
                 } else {
                     // The key move up first then throw reward
@@ -189,7 +185,7 @@ public class KeyEntity extends Mob {
                         );
                     }
                     int xpAmount = 1395;
-                    level().addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
+                    level().addFreshEntity(new ExperienceOrb(
                         level(),
                         this.getOnPos().getX() + 0.5,
                         this.getOnPos().getY() + 1,
@@ -198,16 +194,6 @@ public class KeyEntity extends Mob {
                     ));
                 }
             }
-        }
-    }
-
-    private void entityClaimChunk(@NotNull Player player) {
-        ClaimChunkHelper claimChunkHelper = null;
-        try {
-            claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
-            claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
-        } catch (CommandSyntaxException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -233,7 +219,6 @@ public class KeyEntity extends Mob {
             level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
             summonedMobRL = selectedMobId;
             setState(KeyEntityState.DISAPPEARED);
-            entityClaimChunk(player);
             return true;
         }
 
@@ -267,6 +252,7 @@ public class KeyEntity extends Mob {
                             loadedMob.setTarget(player);
                             level().addFreshEntity(loadedMob);
                             summonedMobId = loadedMob.getUUID();
+                            summonedMobRL = selectedMobId;
                             usedCustomNBT = true;
                         } else {
                             LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", BuiltInRegistries.ENTITY_TYPE.getKey(loaded.getType()));
@@ -285,17 +271,18 @@ public class KeyEntity extends Mob {
                     mob.setTarget(player);
                     level().addFreshEntity(mob);
                 }
+
                 if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
                     mob.interact(player, InteractionHand.OFF_HAND);
-                    summonedMobId = new UUID(0L, 0L);
+                    multiPhaseBoss = true;
+                    summonedMobRL = "irons_spellbooks:dead_king_corpse";
                 } else {
-                    summonedMobId = mob.getUUID();
+                    summonedMobRL = selectedMobId;
                 }
+                summonedMobId = mob.getUUID();
             }
             level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-            summonedMobRL = selectedMobId;
             setState(KeyEntityState.DISAPPEARED);
-            entityClaimChunk(player);
             return true;
         }
 
