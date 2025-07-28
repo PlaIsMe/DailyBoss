@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.entity.KeyEntity;
+import com.pla.pladailyboss.enums.BossLootDataState;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.init.BlockInit;
 import net.minecraft.client.Minecraft;
@@ -18,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.fml.ModList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -55,7 +57,9 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
             pPoseStack.pushPose();
             pPoseStack.translate(0, 3.5 + offset, 0);
             pPoseStack.mulPose(Axis.ZP.rotationDegrees(45.0f));
-
+            if (ModList.get().isLoaded("annoyingvillagers")) {
+                pPoseStack.scale(0.5f, 0.5f, 0.5f);
+            }
             float spin = (float) ((relativeGameTime * 4) % 360);
             pPoseStack.mulPose(Axis.XP.rotationDegrees(spin));
             this.context.getItemRenderer().renderStatic(
