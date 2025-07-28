@@ -1,6 +1,5 @@
 package com.pla.pladailyboss.entity;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
 import com.pla.pladailyboss.compat.BrutalBossesCompat;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
@@ -8,7 +7,6 @@ import com.pla.pladailyboss.data.BossLootData;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
-import com.pla.pladailyboss.ftb.ClaimChunkHelper;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +41,7 @@ public class KeyEntity extends Mob {
     private String summonedMobRL;
     private KeyEntityState state;
     private long updatedStateTime;
+    private boolean multiPhaseBoss = false;
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
     private static final Random RANDOM = new Random();
     private static final Logger LOGGER = LogManager.getLogger();
@@ -76,6 +75,7 @@ public class KeyEntity extends Mob {
         pCompound.putString("SummonedMobRL", summonedMobRL);
         pCompound.putString("KeyState", state.name());
         pCompound.putLong("UpdatedStateTime", updatedStateTime);
+        pCompound.putBoolean("MultiPhaseBoss", multiPhaseBoss);
     }
 
     @Override
@@ -101,6 +101,7 @@ public class KeyEntity extends Mob {
             this.state = KeyEntityState.NORMAL;
         }
         this.updatedStateTime = pCompound.contains("UpdatedStateTime") ? pCompound.getLong("UpdatedStateTime") : 0L;
+        this.multiPhaseBoss = pCompound.contains("MultiPhaseBoss") && pCompound.getBoolean("MultiPhaseBoss");
         this.entityData.set(DATA_STATE, this.state.ordinal());
         this.entityData.set(UPDATED_STATE_TIME, String.valueOf(this.updatedStateTime));
     }
@@ -141,7 +142,7 @@ public class KeyEntity extends Mob {
                 if (entity instanceof Mob mob) {
                     double distance = this.distanceToSqr(mob);
                     if (distance > 30 * 30) {
-                        mob.teleportTo(this.getX(), this.getY() + 2.5, this.getZ());
+                        mob.teleportTo(this.getX(), this.getY(), this.getZ());
                     }
 
                     long now = System.currentTimeMillis();
@@ -150,14 +151,27 @@ public class KeyEntity extends Mob {
                         summonedMobId = null;
                         setState(KeyEntityState.NORMAL);
                     }
-                } else if (summonedMobId.equals(new UUID(0L, 0L))) {
-                    AABB area = new AABB(this.blockPosition()).inflate(2.5); // 5x5 cube
-                    List<Entity> nearby = level.getEntities(this, area, realMob ->
-                            Objects.equals(ForgeRegistries.ENTITIES.getKey(realMob.getType()), new ResourceLocation("irons_spellbooks", "dead_king"))
-                    );
-
-                    if (!nearby.isEmpty()) {
-                        summonedMobId = nearby.get(0).getUUID();
+                } else if (multiPhaseBoss) {
+                    if (Objects.equals(summonedMobRL, "irons_spellbooks:dead_king_corpse")) {
+                        AABB area = new AABB(this.blockPosition()).inflate(2.5);
+                        List<Entity> nearby = level.getEntities(this, area, realMob ->
+                                Objects.equals(ForgeRegistries.ENTITIES.getKey(realMob.getType()), new ResourceLocation("irons_spellbooks", "dead_king"))
+                        );
+                        if (!nearby.isEmpty()) {
+                            summonedMobId = nearby.get(0).getUUID();
+                            summonedMobRL = "irons_spellbooks:dead_king";
+                            multiPhaseBoss = false;
+                        }
+                    } else if (Objects.equals(summonedMobRL, "annoyingvillagers:blue_demon")) {
+                        AABB area = new AABB(this.blockPosition()).inflate(60);
+                        List<Entity> nearby = level.getEntities(this, area, realMob ->
+                                Objects.equals(ForgeRegistries.ENTITIES.getKey(realMob.getType()), new ResourceLocation("annoyingvillagers", "blue_demon_2"))
+                        );
+                        if (!nearby.isEmpty()) {
+                            summonedMobId = nearby.get(0).getUUID();
+                            summonedMobRL = "annoyingvillagers:blue_demon_2";
+                            multiPhaseBoss = false;
+                        }
                     }
                 } else {
                     // The key move up first then throw reward
@@ -191,16 +205,6 @@ public class KeyEntity extends Mob {
         }
     }
 
-    private void entityClaimChunk(@NotNull Player player) {
-        ClaimChunkHelper claimChunkHelper = null;
-        try {
-            claimChunkHelper = ClaimChunkHelper.getInstance(player.getServer());
-            claimChunkHelper.claimChunk(player.createCommandSourceStack(), (ServerPlayer) player, this.getOnPos());
-        } catch (CommandSyntaxException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private boolean spawnBoss(@NotNull Player player) {
         List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
         if (mobIds.isEmpty()) {
@@ -223,13 +227,14 @@ public class KeyEntity extends Mob {
             level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
             summonedMobRL = selectedMobId;
             setState(KeyEntityState.DISAPPEARED);
-            entityClaimChunk(player);
             return true;
         }
 
         ResourceLocation mobRL;
         if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
             mobRL = new ResourceLocation("irons_spellbooks", "dead_king_corpse");
+        } else if (Objects.equals(selectedMobId, "annoyingvillagers:blue_demon_2")) {
+            mobRL = new ResourceLocation("annoyingvillagers", "blue_demon");
         } else {
             String[] parts = selectedMobId.split(":");
             mobRL = new ResourceLocation(parts[0], parts[1]);
@@ -257,6 +262,7 @@ public class KeyEntity extends Mob {
                             loadedMob.setTarget(player);
                             level.addFreshEntity(loadedMob);
                             summonedMobId = loadedMob.getUUID();
+                            summonedMobRL = selectedMobId;
                             usedCustomNBT = true;
                         } else {
                             LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITIES.getKey(loaded.getType()));
@@ -273,15 +279,18 @@ public class KeyEntity extends Mob {
                 level.addFreshEntity(mob);
                 if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
                     mob.interact(player, InteractionHand.OFF_HAND);
-                    summonedMobId = new UUID(0L, 0L);
+                    multiPhaseBoss = true;
+                    summonedMobRL = "irons_spellbooks:dead_king_corpse";
+                } else if (Objects.equals(selectedMobId, "annoyingvillagers:blue_demon_2")) {
+                    multiPhaseBoss = true;
+                    summonedMobRL = "annoyingvillagers:blue_demon";
                 } else {
-                    summonedMobId = mob.getUUID();
+                    summonedMobRL = selectedMobId;
                 }
+                summonedMobId = mob.getUUID();
             }
             level.playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-            summonedMobRL = selectedMobId;
             setState(KeyEntityState.DISAPPEARED);
-            entityClaimChunk(player);
             return true;
         }
 

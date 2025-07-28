@@ -15,7 +15,7 @@ plugins {
 apply plugin: 'net.minecraftforge.gradle'
 
 
-version = '1.2'
+version = '1.3'
 group = 'com.pla.pladailyboss'
 archivesBaseName = 'DailyBoss-1.18.2'
 
@@ -92,9 +92,6 @@ repositories {
 dependencies {
     minecraft 'net.minecraftforge:forge:1.18.2-40.2.21'
     implementation fg.deobf("curse.maven:brutal-bosses-dungeon-557999:4533217")
-    implementation fg.deobf("curse.maven:ftbchunks-314906:5423717")
-    implementation fg.deobf("curse.maven:ftblibrary-404465:4396792")
-    implementation fg.deobf("curse.maven:ftbteams-404468:4579981")
 }
 
 jar {
