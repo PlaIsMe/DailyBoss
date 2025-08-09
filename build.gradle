@@ -65,7 +65,13 @@ repositories {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // Brutal Bosses compat
     implementation fg.deobf("curse.maven:brutal-bosses-dungeon-557999:6622620")
+//    implementation fg.deobf("curse.maven:cupboard-326652:5470032")
+
+    // Bosses'Rise compat
+    implementation fg.deobf("curse.maven:bossesrise-1314084:6860704")
 }
 
 tasks.named('processResources', ProcessResources).configure {

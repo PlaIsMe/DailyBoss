@@ -29,6 +29,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.unusual.blockfactorysbosses.entity.InfernalDragonEntity;
+import net.unusual.blockfactorysbosses.entity.SandwormEntity;
+import net.unusual.blockfactorysbosses.entity.UnderworldKnightEntity;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -275,6 +278,15 @@ public class KeyEntity extends Mob {
                 mob.setPos(this.getX(), this.getY(), this.getZ());
                 mob.setPersistenceRequired();
                 mob.setTarget(player);
+                if (Objects.equals(selectedMobId, "block_factorys_bosses:sandworm")) {
+                    mob.getEntityData().set(SandwormEntity.DATA_spawn_animtime, 180);
+                }
+                if (Objects.equals(selectedMobId, "block_factorys_bosses:infernal_dragon")) {
+                    mob.getEntityData().set(InfernalDragonEntity.DATA_spawn_animtime, 236);
+                }
+                if (Objects.equals(selectedMobId, "block_factorys_bosses:underworld_knight")) {
+                    mob.getEntityData().set(UnderworldKnightEntity.DATA_spawn_animtime, 226);
+                }
                 level().addFreshEntity(mob);
                 if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
                     mob.interact(player, InteractionHand.OFF_HAND);

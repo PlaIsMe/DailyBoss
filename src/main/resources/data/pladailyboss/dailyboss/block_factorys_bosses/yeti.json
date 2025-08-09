@@ -1,0 +1,7 @@
+{
+  "loot_table": [
+    "minecraft:chests/simple_dungeon",
+    "minecraft:chests/shipwreck_treasure",
+    "minecraft:chests/buried_treasure"
+  ]
+}
