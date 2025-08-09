@@ -1,0 +1,8 @@
+{
+  "loot_table": [
+    "minecraft:chests/simple_dungeon",
+    "block_factorys_bosses:chests/undead_arena_rare",
+    "minecraft:chests/bastion_treasure",
+    "minecraft:chests/bastion_other"
+  ]
+}

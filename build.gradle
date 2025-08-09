@@ -89,6 +89,9 @@ dependencies {
     // Iron spell compat
     implementation "curse.maven:irons-spells-n-spellbooks-855414:6769020"
     implementation "curse.maven:geckolib-388172:6659026"
+
+    // Bosses Rise comopat
+    implementation "curse.maven:bossesrise-1314084:6852556"
 }
 
 
