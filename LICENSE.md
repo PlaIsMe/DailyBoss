@@ -1,12 +1,4 @@
-# Daily Boss
-
-[Curseforge Page](https://www.curseforge.com/minecraft/mc-mods/daily-boss)
-
-## General
-
-If you love my mod and would like to help support its ongoing development consider buyding me a coffee
-
-<a href="https://buymeacoffee.com/pla_is_me"><img src="https://shields.io/badge/-Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&amp;logo=buymeacoffee&amp;logoColor=white" alt="" width="162" height="28" /></a>
+CUSTOM LISCENSE
 
 ## License & Use
 We reserve all rights. The points below outline what you can, cannot and must do when dealing with the
