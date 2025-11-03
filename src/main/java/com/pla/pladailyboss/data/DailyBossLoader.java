@@ -1,6 +1,7 @@
 package com.pla.pladailyboss.data;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pla.pladailyboss.config.PlaDailyBossConfig;
@@ -74,8 +75,28 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
 
             JsonObject obj = element.getAsJsonObject();
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
-            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState));
+            List<String> phases = parsePhases(element);
+            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState, phases));
         }
+    }
+
+    private List<String> parsePhases(JsonElement element) {
+        List<String> phases = new ArrayList<>();
+        if (!element.isJsonObject()) return phases;
+        JsonObject obj = element.getAsJsonObject();
+        JsonElement p = obj.get("phases");
+        if (p == null) return phases;
+        if (p.isJsonArray()) {
+            JsonArray arr = p.getAsJsonArray();
+            for (JsonElement e : arr) {
+                if (e.isJsonPrimitive()) {
+                    phases.add(e.getAsString());
+                }
+            }
+        } else if (p.isJsonPrimitive()) {
+            phases.add(p.getAsString());
+        }
+        return phases;
     }
 
     public static List<String> getListBasedOnKilledMob(ServerPlayer player, MinecraftServer server) {

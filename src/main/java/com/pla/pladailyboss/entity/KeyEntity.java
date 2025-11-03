@@ -10,6 +10,8 @@ import com.pla.pladailyboss.event.RewardEvent;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -48,6 +50,11 @@ public class KeyEntity extends Mob {
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
     private static final Random RANDOM = new Random();
     private static final Logger LOGGER = LogManager.getLogger();
+    private List<String> phaseChain = Collections.emptyList();
+    private int phaseIndex = -1;
+
+    private static final String NBT_PHASE_CHAIN = "PhaseChain";
+    private static final String NBT_PHASE_INDEX = "PhaseIndex";
 
     private static final EntityDataAccessor<Integer> DATA_STATE =
             SynchedEntityData.defineId(KeyEntity.class, EntityDataSerializers.INT);
@@ -79,6 +86,14 @@ public class KeyEntity extends Mob {
         pCompound.putString("KeyState", state.name());
         pCompound.putLong("UpdatedStateTime", updatedStateTime);
         pCompound.putBoolean("MultiPhaseBoss", multiPhaseBoss);
+        if (phaseChain != null && !phaseChain.isEmpty()) {
+            ListTag list = new ListTag();
+            for (String id : phaseChain) {
+                list.add(StringTag.valueOf(id));
+            }
+            pCompound.put(NBT_PHASE_CHAIN, list);
+        }
+        pCompound.putInt(NBT_PHASE_INDEX, phaseIndex);
     }
 
     @Override
@@ -107,6 +122,52 @@ public class KeyEntity extends Mob {
         this.multiPhaseBoss = pCompound.contains("MultiPhaseBoss") && pCompound.getBoolean("MultiPhaseBoss");
         this.entityData.set(DATA_STATE, this.state.ordinal());
         this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+
+        if (pCompound.contains(NBT_PHASE_CHAIN)) {
+            ListTag list = pCompound.getList(NBT_PHASE_CHAIN, /* TAG_String */ 8);
+            List<String> loaded = new ArrayList<>(list.size());
+            for (int i = 0; i < list.size(); i++) {
+                loaded.add(list.getString(i));
+            }
+            this.phaseChain = loaded.isEmpty() ? Collections.emptyList() : Collections.unmodifiableList(loaded);
+        } else {
+            this.phaseChain = Collections.emptyList();
+        }
+
+        this.phaseIndex = pCompound.contains(NBT_PHASE_INDEX) ? pCompound.getInt(NBT_PHASE_INDEX) : -1;
+        if (this.phaseIndex < -1) this.phaseIndex = -1;
+        if (!this.phaseChain.isEmpty() && this.phaseIndex >= this.phaseChain.size()) {
+            this.phaseIndex = this.phaseChain.size() - 1;
+        }
+        if (this.phaseChain.isEmpty()) {
+            if (this.summonedMobRL != null && !this.summonedMobRL.isEmpty()) {
+                this.phaseChain = Collections.singletonList(this.summonedMobRL);
+                this.phaseIndex = 0;
+            } else {
+                this.phaseIndex = -1;
+            }
+        }
+        if (this.multiPhaseBoss && (this.phaseChain.isEmpty() || this.phaseIndex < 0)) {
+            tryRebuildPhaseChainFromData();
+        }
+    }
+
+    private void tryRebuildPhaseChainFromData() {
+        if (this.summonedMobRL == null || this.summonedMobRL.isEmpty()) return;
+
+        for (Map.Entry<String, BossLootData> e : DailyBossLoader.BOSS_LOOT_TABLES.entrySet()) {
+            BossLootData d = e.getValue();
+            if (d != null && d.isMultiPhase() && d.phases.contains(this.summonedMobRL)) {
+                this.phaseChain = List.copyOf(d.phases);
+                this.phaseIndex = d.phases.indexOf(this.summonedMobRL);
+                this.multiPhaseBoss = (this.phaseIndex < this.phaseChain.size() - 1);
+                return;
+            }
+        }
+
+        this.phaseChain = Collections.singletonList(this.summonedMobRL);
+        this.phaseIndex = 0;
+        this.multiPhaseBoss = false;
     }
 
     @Override
@@ -154,57 +215,119 @@ public class KeyEntity extends Mob {
                         summonedMobId = null;
                         setState(KeyEntityState.NORMAL);
                     }
-                } else if (multiPhaseBoss) {
-                    if (Objects.equals(summonedMobRL, "irons_spellbooks:dead_king_corpse")) {
-                        AABB area = new AABB(this.blockPosition()).inflate(2.5);
-                        List<Entity> nearby = level().getEntities(this, area, realMob ->
-                                Objects.equals(ForgeRegistries.ENTITY_TYPES.getKey(realMob.getType()), new ResourceLocation("irons_spellbooks:dead_king"))
-                        );
-                        if (!nearby.isEmpty()) {
-                            summonedMobId = nearby.get(0).getUUID();
-                            summonedMobRL = "irons_spellbooks:dead_king";
-                            multiPhaseBoss = false;
-                        }
-                    } else if (Objects.equals(summonedMobRL, "annoyingvillagers:blue_demon")) {
-                        AABB area = new AABB(this.blockPosition()).inflate(60);
-                        List<Entity> nearby = level().getEntities(this, area, realMob ->
-                                Objects.equals(ForgeRegistries.ENTITY_TYPES.getKey(realMob.getType()), new ResourceLocation("annoyingvillagers:blue_demon_2"))
-                        );
-                        if (!nearby.isEmpty()) {
-                            summonedMobId = nearby.get(0).getUUID();
-                            summonedMobRL = "annoyingvillagers:blue_demon_2";
-                            multiPhaseBoss = false;
-                        }
-                    }
+                } else if (multiPhaseBoss && phaseChain != null && !phaseChain.isEmpty()
+                        && phaseIndex >= 0 && phaseIndex < phaseChain.size() - 1) {
+                    checkMob();
                 } else {
-                    // The key move up first then throw reward
-                    String tempSummonedMobRL = summonedMobRL;
-
-                    summonedMobRL = "";
-                    summonedMobId = null;
+                    String lastId = this.summonedMobRL;
+                    this.summonedMobRL = "";
+                    this.summonedMobId = null;
+                    this.phaseChain = Collections.emptyList();
+                    this.phaseIndex = -1;
+                    this.multiPhaseBoss = false;
                     setState(KeyEntityState.DISABLED);
 
-                    BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(tempSummonedMobRL);
-                    List<String> lootTables = data != null ? data.lootTables : Collections.emptyList();
-                    for (int i = 0; i < 5; i++) {
-                        String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
-                        RewardEvent.dropLoot(
-                            (ServerLevel) level(),
-                            new ResourceLocation(lootTableId),
-                            this.getOnPos(),
-                            1
-                        );
+                    BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(lastId);
+                    List<String> lootTables = (data != null) ? data.lootTables : Collections.emptyList();
+
+                    if (!lootTables.isEmpty()) {
+                        for (int i = 0; i < 5; i++) {
+                            String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
+                            RewardEvent.dropLoot(
+                                    (ServerLevel) level(),
+                                    new ResourceLocation(lootTableId),
+                                    this.getOnPos(),
+                                    1
+                            );
+                        }
+                    } else {
+                        LOGGER.warn("[Daily Boss] No loot tables configured for '{}'; skipping loot drop.", lastId);
                     }
+
                     int xpAmount = 1395;
                     level().addFreshEntity(new ExperienceOrb(
-                        level(),
-                        this.getOnPos().getX() + 0.5,
-                        this.getOnPos().getY() + 1,
-                        this.getOnPos().getZ() + 0.5,
-                        xpAmount
+                            level(),
+                            this.getOnPos().getX() + 0.5,
+                            this.getOnPos().getY() + 1,
+                            this.getOnPos().getZ() + 0.5,
+                            xpAmount
                     ));
                 }
             }
+        }
+    }
+
+    private ResourceLocation preProcessMob(String selectedMobId) {
+        if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
+            if (this.level() instanceof ServerLevel sl) {
+                Entity e = BrutalBossesCompat.spawnRandomBossAndReturn(sl, this.getOnPos());
+                if (e instanceof Mob m) {
+                    m.setPersistenceRequired();
+                    this.summonedMobId = m.getUUID();
+                    this.summonedMobRL = "brutalbosses:randomboss";
+
+                    this.phaseChain = Collections.singletonList(this.summonedMobRL);
+                    this.phaseIndex = 0;
+                    this.multiPhaseBoss = false;
+
+                    this.level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL,
+                            SoundSource.BLOCKS, 1.0f, 1.0f);
+                    setState(KeyEntityState.DISAPPEARED);
+                    return null;
+                } else {
+                    LOGGER.warn("[Daily Boss] BrutalBosses random spawn failed for {}", selectedMobId);
+                }
+            }
+        }
+
+        BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
+        if (data != null && data.isMultiPhase()) {
+            this.phaseChain = new ArrayList<>(data.phases);
+            this.phaseIndex = 0;
+            this.multiPhaseBoss = true;
+            return new ResourceLocation(this.phaseChain.get(0));
+        } else {
+            this.phaseChain = Collections.singletonList(selectedMobId);
+            this.phaseIndex = 0;
+            this.multiPhaseBoss = false;
+            return new ResourceLocation(selectedMobId);
+        }
+    }
+
+    private void processMob(String spawnedMobId, Mob mob, ServerPlayer player) {
+        if (Objects.equals(spawnedMobId, "block_factorys_bosses:sandworm") && mob instanceof SandwormEntity sandworm) {
+            sandworm.getEntityData().set(SandwormEntity.DATA_spawn_animtime, 180);
+        }
+        if (Objects.equals(spawnedMobId, "block_factorys_bosses:infernal_dragon") && mob instanceof InfernalDragonEntity dragon) {
+            dragon.getEntityData().set(InfernalDragonEntity.DATA_spawn_animtime, 236);
+        }
+        if (Objects.equals(spawnedMobId, "block_factorys_bosses:underworld_knight") && mob instanceof UnderworldKnightEntity knight) {
+            knight.getEntityData().set(UnderworldKnightEntity.DATA_spawn_animtime, 226);
+        }
+
+        if (Objects.equals(spawnedMobId, "irons_spellbooks:dead_king_corpse")) {
+            mob.interact(player, InteractionHand.OFF_HAND);
+        }
+    }
+
+    private void checkMob() {
+        if (this.phaseChain == null || this.phaseChain.isEmpty()) return;
+        if (this.phaseIndex < 0 || this.phaseIndex >= this.phaseChain.size() - 1) return;
+
+        String nextPhaseId = this.phaseChain.get(this.phaseIndex + 1);
+        double radius = 64.0;
+
+        AABB area = new AABB(this.blockPosition()).inflate(radius);
+        List<Entity> nearby = level().getEntities(this, area, e ->
+                Objects.equals(ForgeRegistries.ENTITY_TYPES.getKey(e.getType()), new ResourceLocation(nextPhaseId)));
+
+        if (!nearby.isEmpty()) {
+            Entity next = nearby.get(0);
+            this.summonedMobId = next.getUUID();
+            this.summonedMobRL = nextPhaseId;
+
+            this.phaseIndex++;
+            this.multiPhaseBoss = (this.phaseIndex < this.phaseChain.size() - 1);
         }
     }
 
@@ -225,24 +348,12 @@ public class KeyEntity extends Mob {
             selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
         }
 
-        if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
-            summonedMobId = Objects.requireNonNull(BrutalBossesCompat.spawnRandomBossAndReturn((ServerLevel) this.level(), this.getOnPos())).getUUID();
-            level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
-            summonedMobRL = selectedMobId;
-            setState(KeyEntityState.DISAPPEARED);
+        ResourceLocation mobRL = preProcessMob(selectedMobId);
+        if (mobRL == null) {
             return true;
         }
 
-        ResourceLocation mobRL;
-        if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
-            mobRL = new ResourceLocation("irons_spellbooks:dead_king_corpse");
-        } else if (Objects.equals(selectedMobId, "annoyingvillagers:blue_demon_2")) {
-            mobRL = new ResourceLocation("annoyingvillagers:blue_demon");
-        } else {
-            mobRL = new ResourceLocation(selectedMobId);
-        }
         EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
-
         boolean usedCustomNBT = false;
 
         if (type != null && type.create(level()) instanceof Mob mob) {
@@ -252,56 +363,48 @@ public class KeyEntity extends Mob {
                         .resultOrPartial(msg -> LOGGER.warn("[Daily Boss] Failed to parse NBT for mob {}: {}", selectedMobId, msg))
                         .orElse(new CompoundTag());
                 if (!tag.isEmpty()) {
-                    tag.putString("id", selectedMobId);
+                    tag.putString("id", mobRL.toString());
                     Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
                         e.moveTo(this.getX(), this.getY(), this.getZ());
                         return e;
                     });
 
-                    if (loaded != null) {
-                        if (loaded instanceof Mob loadedMob && level() instanceof ServerLevel serverLevel) {
-                            loadedMob.setPersistenceRequired();
-                            loadedMob.setTarget(player);
-                            loadedMob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()), MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
-                            serverLevel.addFreshEntity(loadedMob);
-                            summonedMobId = loadedMob.getUUID();
-                            summonedMobRL = selectedMobId;
-                            usedCustomNBT = true;
-                        } else {
-                            LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
-                        }
+                    if (loaded instanceof Mob loadedMob && level() instanceof ServerLevel serverLevel) {
+                        loadedMob.setPersistenceRequired();
+                        loadedMob.setTarget(player);
+                        loadedMob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
+                                MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
+                        serverLevel.addFreshEntity(loadedMob);
+
+                        this.summonedMobId = loadedMob.getUUID();
+                        this.summonedMobRL = ForgeRegistries.ENTITY_TYPES.getKey(loadedMob.getType()).toString();
+                        usedCustomNBT = true;
+
+                        processMob(this.summonedMobRL, loadedMob, (ServerPlayer) player);
+                    } else if (loaded != null) {
+                        LOGGER.warn("[DailyBoss] Loaded entity from NBT is not a mob: {}", ForgeRegistries.ENTITY_TYPES.getKey(loaded.getType()));
                     } else {
                         LOGGER.warn("[DailyBoss] No entity was created from NBT for mob {}", selectedMobId);
                     }
                 }
             }
-            if (!usedCustomNBT && level() instanceof ServerLevel serverLevel){
+
+            if (!usedCustomNBT && level() instanceof ServerLevel serverLevel) {
                 mob.moveTo(this.getX(), this.getY(), this.getZ());
                 mob.setPersistenceRequired();
                 mob.setTarget(player);
-                if (Objects.equals(selectedMobId, "block_factorys_bosses:sandworm")) {
-                    mob.getEntityData().set(SandwormEntity.DATA_spawn_animtime, 180);
-                }
-                if (Objects.equals(selectedMobId, "block_factorys_bosses:infernal_dragon")) {
-                    mob.getEntityData().set(InfernalDragonEntity.DATA_spawn_animtime, 236);
-                }
-                if (Objects.equals(selectedMobId, "block_factorys_bosses:underworld_knight")) {
-                    mob.getEntityData().set(UnderworldKnightEntity.DATA_spawn_animtime, 226);
-                }
-                mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()), MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
+
+                String spawnedId = ForgeRegistries.ENTITY_TYPES.getKey(type).toString();
+                processMob(spawnedId, mob, (ServerPlayer) player);
+
+                mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
+                        MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
                 serverLevel.addFreshEntity(mob);
-                if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
-                    mob.interact(player, InteractionHand.OFF_HAND);
-                    multiPhaseBoss = true;
-                    summonedMobRL = "irons_spellbooks:dead_king_corpse";
-                } else if (Objects.equals(selectedMobId, "annoyingvillagers:blue_demon_2")) {
-                    multiPhaseBoss = true;
-                    summonedMobRL = "annoyingvillagers:blue_demon";
-                } else {
-                    summonedMobRL = selectedMobId;
-                }
-                summonedMobId = mob.getUUID();
+
+                this.summonedMobId = mob.getUUID();
+                this.summonedMobRL = spawnedId;
             }
+
             level().playSound(null, this.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL, SoundSource.BLOCKS, 1.0f, 1.0f);
             setState(KeyEntityState.DISAPPEARED);
             return true;
