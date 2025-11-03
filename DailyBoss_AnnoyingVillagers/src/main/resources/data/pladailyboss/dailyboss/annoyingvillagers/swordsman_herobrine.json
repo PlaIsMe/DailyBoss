@@ -1,0 +1,6 @@
+{
+  "loot_table": [
+    "minecraft:chests/end_city_treasure",
+    "minecraft:chests/bastion_treasure"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.pla.dailyboss_irons_spellbooks.mixins",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "dailyboss_irons_spellbooks.mixins.refmap.json",
+  "mixins": [
+    "KeyEntityMixin"
+  ],
+  "client": [
+  ],
+  "minVersion": "0.8"
+}
