@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.pla.dailyboss_brutal_bosses.mixins",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "dailyboss_brutal_bosses.mixins.refmap.json",
+  "mixins": [
+    "KeyEntityMixin"
+  ],
+  "client": [
+  ],
+  "minVersion": "0.8"
+}
