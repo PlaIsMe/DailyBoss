@@ -245,15 +245,16 @@ public class KeyEntity extends Mob {
                 if (!tag.isEmpty()) {
                     tag.putString("id", selectedMobId);
                     Entity loaded = EntityType.loadEntityRecursive(tag, level(), e -> {
-                        e.setPos(this.getX(), this.getY(), this.getZ());
+                        e.moveTo(this.getX(), this.getY(), this.getZ());
                         return e;
                     });
 
                     if (loaded != null) {
-                        if (loaded instanceof Mob loadedMob) {
+                        if (loaded instanceof Mob loadedMob && level() instanceof ServerLevel serverLevel) {
                             loadedMob.setPersistenceRequired();
                             loadedMob.setTarget(player);
-                            level().addFreshEntity(loadedMob);
+                            loadedMob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()), MobSpawnType.COMMAND, (SpawnGroupData) null);
+                            serverLevel.addFreshEntity(loadedMob);
                             summonedMobId = loadedMob.getUUID();
                             summonedMobRL = selectedMobId;
                             usedCustomNBT = true;
@@ -265,11 +266,11 @@ public class KeyEntity extends Mob {
                     }
                 }
             }
-            if (!usedCustomNBT){
+            if (!usedCustomNBT && level() instanceof ServerLevel serverLevel){
                 if (Objects.equals(selectedMobId, "irons_spellbooks:fire_boss")) {
                     mob = IronsSpellBooksCompat.spawnIronBoss(this, player);
                 } else {
-                    mob.setPos(this.getX(), this.getY(), this.getZ());
+                    mob.moveTo(this.getX(), this.getY(), this.getZ());
                     mob.setPersistenceRequired();
                     mob.setTarget(player);
                     if (Objects.equals(selectedMobId, "block_factorys_bosses:sandworm")) {
@@ -281,7 +282,8 @@ public class KeyEntity extends Mob {
                     if (Objects.equals(selectedMobId, "block_factorys_bosses:underworld_knight")) {
                         mob.getEntityData().set(UnderworldKnightEntity.DATA_spawn_animtime, 226);
                     }
-                    level().addFreshEntity(mob);
+                    mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()), MobSpawnType.COMMAND, (SpawnGroupData) null);
+                    serverLevel.addFreshEntity(mob);
                 }
 
                 if (Objects.equals(selectedMobId, "irons_spellbooks:dead_king")) {
