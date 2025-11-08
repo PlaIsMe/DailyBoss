@@ -1,0 +1,8 @@
+{
+  "loot_table": [
+    "minecraft:chests/buried_treasure",
+    "aquamirae:chests/frozen_chest",
+    "aquamirae:chests/ship_1",
+    "aquamirae:chests/ship_2"
+  ]
+}
