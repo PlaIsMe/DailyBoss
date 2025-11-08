@@ -1,0 +1,7 @@
+{
+  "loot_table": [
+    "minecraft:chests/stronghold_library",
+    "minecraft:chests/simple_dungeon",
+    "minecraft:chests/woodland_mansion"
+  ]
+}
