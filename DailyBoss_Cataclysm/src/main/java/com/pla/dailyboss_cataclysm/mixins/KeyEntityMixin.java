@@ -66,7 +66,7 @@ public class KeyEntityMixin {
             }
 
             ScreenShake_Entity.ScreenShake(serverLevel, Vec3.atCenterOf(self.getOnPos()), 20.0F, 0.1F, 0, 40);
-            maledictusEntity.setTombstonePos(maledictusEntity.getOnPos());
+            maledictusEntity.setTombstonePos(BlockPos.ZERO);
             maledictusEntity.setHomePos(BlockPos.ZERO);
             ResourceLocation dimLoc = serverLevel.dimension().location();
             maledictusEntity.setDimensionType(dimLoc.toString());
