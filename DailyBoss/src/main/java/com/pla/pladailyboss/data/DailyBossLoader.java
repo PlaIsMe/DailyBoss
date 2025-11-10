@@ -33,6 +33,14 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         super(GSON, "dailyboss");
     }
 
+    private boolean parseIsWater(JsonElement element) {
+        if (!element.isJsonObject()) return false;
+        JsonObject obj = element.getAsJsonObject();
+        if (!obj.has("is_water")) return false;
+        JsonElement w = obj.get("is_water");
+        return w.isJsonPrimitive() && w.getAsJsonPrimitive().isBoolean() && w.getAsBoolean();
+    }
+
     private List<String> parseLootTables(JsonElement element) {
         List<String> lootTables = new ArrayList<>();
         if (!element.isJsonObject()) return lootTables;
@@ -75,7 +83,8 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
 
             List<String> phases = parsePhases(element);
-            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState, phases));
+            boolean isWater = parseIsWater(element);
+            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState, phases, isWater));
         }
     }
 

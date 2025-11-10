@@ -11,19 +11,29 @@ public class BossLootData {
     public final JsonObject nbt;
     public final BossLootDataState state;
     public final List<String> phases;
+    public final boolean isWater;
 
     public BossLootData(List<String> lootTables, JsonObject nbt, BossLootDataState state) {
-        this(lootTables, nbt, state, Collections.emptyList());
+        this(lootTables, nbt, state, Collections.emptyList(), false);
     }
 
     public BossLootData(List<String> lootTables, JsonObject nbt, BossLootDataState state, List<String> phases) {
+        this(lootTables, nbt, state, phases, false);
+    }
+
+    public BossLootData(List<String> lootTables, JsonObject nbt, BossLootDataState state, List<String> phases, boolean isWater) {
         this.lootTables = lootTables == null ? Collections.emptyList() : lootTables;
         this.nbt = nbt == null ? new JsonObject() : nbt;
         this.state = state;
         this.phases = (phases == null ? Collections.emptyList() : List.copyOf(phases));
+        this.isWater = isWater;
     }
 
     public boolean isMultiPhase() {
         return phases != null && phases.size() > 1;
+    }
+
+    public boolean isWater() {
+        return isWater;
     }
 }

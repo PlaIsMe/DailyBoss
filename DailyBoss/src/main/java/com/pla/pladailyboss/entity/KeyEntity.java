@@ -7,6 +7,7 @@ import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.event.RewardEvent;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -21,6 +22,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -29,6 +31,9 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 
@@ -48,6 +53,20 @@ public class KeyEntity extends Mob {
     private static final Logger LOGGER = LogManager.getLogger();
     private List<String> phaseChain = Collections.emptyList();
     private int phaseIndex = -1;
+
+    private boolean wfActive = false;
+    private int wfMinX, wfMaxX, wfMinZ, wfMaxZ;
+    private int wfStartY, wfMaxY;
+    private int wfNextY;
+    private long wfNextRunTick = 0L;
+
+    private boolean wdActive = false;
+    private int wdMinX, wdMaxX, wdMinZ, wdMaxZ;
+    private static final int CLEAR_MARGIN = 10;
+    private int wdNextY;
+    private long wdNextRunTick = 0L;
+
+    private static final int WF_PERIOD_TICKS = 10;
 
     private static final String NBT_PHASE_CHAIN = "PhaseChain";
     private static final String NBT_PHASE_INDEX = "PhaseIndex";
@@ -91,6 +110,94 @@ public class KeyEntity extends Mob {
         builder.define(RECHARGE_COOLDOWN, 0L);
     }
 
+    public void startWaterFillBox() {
+        if (!(level() instanceof ServerLevel sl)) return;
+
+        double halfXZ = 30.0;
+        int baseY = Mth.floor(this.getY()); // per your spec
+        this.wfMinX = Mth.floor(this.getX() - halfXZ);
+        this.wfMaxX = Mth.floor(this.getX() + halfXZ);
+        this.wfMinZ = Mth.floor(this.getZ() - halfXZ);
+        this.wfMaxZ = Mth.floor(this.getZ() + halfXZ);
+
+        this.wfStartY = baseY;
+        this.wfMaxY   = baseY + 64 - 1;
+        this.wfNextY  = this.wfStartY;
+
+        this.wfNextRunTick = sl.getGameTime();
+        this.wfActive = true;
+        this.wdActive = false;
+    }
+
+    public void startWaterClearBox() {
+        if (!(level() instanceof ServerLevel serverLevel)) return;
+        if (wfMaxY <= wfStartY) return;
+
+        this.wdMinX = this.wfMinX - CLEAR_MARGIN;
+        this.wdMaxX = this.wfMaxX + CLEAR_MARGIN;
+        this.wdMinZ = this.wfMinZ - CLEAR_MARGIN;
+        this.wdMaxZ = this.wfMaxZ + CLEAR_MARGIN;
+
+        this.wdNextY = Math.max(wfStartY, Math.min(wfMaxY, wfNextY - 1));
+        this.wdNextRunTick = serverLevel.getGameTime();
+        this.wdActive = true;
+        this.wfActive = false;
+    }
+
+    public void stopAllWaterOps() {
+        this.wfActive = false;
+        this.wdActive = false;
+    }
+
+    private void stepWaterFillLayer(ServerLevel level) {
+        final int flags = 2;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int z = wfMinZ; z <= wfMaxZ; z++) {
+            for (int x = wfMinX; x <= wfMaxX; x++) {
+                pos.set(x, wfNextY, z);
+                if (!level.hasChunkAt(pos)) continue;
+
+                BlockState state = level.getBlockState(pos);
+
+                if (state.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                    if (!state.getValue(BlockStateProperties.WATERLOGGED)) {
+                        level.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, true), flags);
+                    }
+                } else if (state.isAir()) {
+                    level.setBlock(pos, Blocks.WATER.defaultBlockState(), flags);
+                }
+            }
+        }
+
+        wfNextY++;
+        if (wfNextY > wfMaxY) wfActive = false;
+    }
+
+    private void stepWaterClearLayer(ServerLevel level) {
+        final int flags = 2;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int z = wdMinZ; z <= wdMaxZ; z++) {
+            for (int x = wdMinX; x <= wdMaxX; x++) {
+                pos.set(x, wdNextY, z);
+                if (!level.hasChunkAt(pos)) continue;
+
+                BlockState state = level.getBlockState(pos);
+
+                if (state.hasProperty(BlockStateProperties.WATERLOGGED)
+                        && state.getValue(BlockStateProperties.WATERLOGGED)) {
+                    level.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, false), flags);
+                } else if (state.getBlock() == Blocks.WATER) {
+                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), flags);
+                }
+            }
+        }
+
+        wdNextY--;
+        if (wdNextY < wfStartY - 1) wdActive = false;
+    }
+
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
@@ -114,6 +221,22 @@ public class KeyEntity extends Mob {
             pCompound.put(NBT_PHASE_CHAIN, list);
         }
         pCompound.putInt(NBT_PHASE_INDEX, phaseIndex);
+
+        pCompound.putBoolean("wfActive", wfActive);
+        pCompound.putInt("wfMinX", wfMinX); pCompound.putInt("wfMaxX", wfMaxX);
+        pCompound.putInt("wfMinZ", wfMinZ); pCompound.putInt("wfMaxZ", wfMaxZ);
+        pCompound.putInt("wfStartY", wfStartY); pCompound.putInt("wfMaxY", wfMaxY);
+        pCompound.putInt("wfNextY", wfNextY);
+        pCompound.putLong("wfNextRunTick", wfNextRunTick);
+
+        pCompound.putBoolean("wdActive", wdActive);
+        pCompound.putInt("wdNextY", wdNextY);
+        pCompound.putLong("wdNextRunTick", wdNextRunTick);
+
+        pCompound.putInt("wdMinX", wdMinX);
+        pCompound.putInt("wdMaxX", wdMaxX);
+        pCompound.putInt("wdMinZ", wdMinZ);
+        pCompound.putInt("wdMaxZ", wdMaxZ);
     }
 
     @Override
@@ -170,6 +293,29 @@ public class KeyEntity extends Mob {
         if (this.multiPhaseBoss && (this.phaseChain.isEmpty() || this.phaseIndex < 0)) {
             tryRebuildPhaseChainFromData();
         }
+
+        wfActive = pCompound.getBoolean("wfActive");
+        wfMinX = pCompound.getInt("wfMinX"); wfMaxX = pCompound.getInt("wfMaxX");
+        wfMinZ = pCompound.getInt("wfMinZ"); wfMaxZ = pCompound.getInt("wfMaxZ");
+        wfStartY = pCompound.getInt("wfStartY"); wfMaxY = pCompound.getInt("wfMaxY");
+        wfNextY = pCompound.getInt("wfNextY");
+        wfNextRunTick = pCompound.getLong("wfNextRunTick");
+
+        wdActive = pCompound.getBoolean("wdActive");
+        wdNextY = pCompound.getInt("wdNextY");
+        wdNextRunTick = pCompound.getLong("wdNextRunTick");
+
+        if (pCompound.contains("wdMinX")) {
+            wdMinX = pCompound.getInt("wdMinX");
+            wdMaxX = pCompound.getInt("wdMaxX");
+            wdMinZ = pCompound.getInt("wdMinZ");
+            wdMaxZ = pCompound.getInt("wdMaxZ");
+        } else {
+            wdMinX = wfMinX - CLEAR_MARGIN;
+            wdMaxX = wfMaxX + CLEAR_MARGIN;
+            wdMinZ = wfMinZ - CLEAR_MARGIN;
+            wdMaxZ = wfMaxZ + CLEAR_MARGIN;
+        }
     }
 
     private void tryRebuildPhaseChainFromData() {
@@ -199,6 +345,20 @@ public class KeyEntity extends Mob {
             this.lookAt(EntityAnchorArgument.Anchor.EYES, player.position());
         }
         if (!level().isClientSide) {
+            if (level() instanceof ServerLevel serverLevel) {
+                long now = serverLevel.getGameTime();
+
+                if (wfActive && now >= wfNextRunTick) {
+                    stepWaterFillLayer(serverLevel);
+                    wfNextRunTick = now + WF_PERIOD_TICKS;
+                }
+
+                if (wdActive && now >= wdNextRunTick) {
+                    stepWaterClearLayer(serverLevel);
+                    wdNextRunTick = now + WF_PERIOD_TICKS;
+                }
+            }
+
             if (state == KeyEntityState.DISAPPEARED && !this.isInvisible()) {
                 this.setInvisible(true);
                 this.setSilent(true);
@@ -224,8 +384,20 @@ public class KeyEntity extends Mob {
                 Entity entity = ((ServerLevel) level()).getEntity(summonedMobId);
 
                 if (entity instanceof Mob mob) {
-                    double distance = this.distanceToSqr(mob);
-                    if (distance > 30 * 30) {
+                    double halfXZ = 30.0;
+                    double upY    = 62.0;
+                    double y0     = this.getBoundingBox().minY;
+
+                    AABB leash = new AABB(
+                            this.getX() - halfXZ,
+                            y0 - 1.0,
+                            this.getZ() - halfXZ,
+                            this.getX() + halfXZ,
+                            y0 + upY,
+                            this.getZ() + halfXZ
+                    );
+
+                    if (!leash.intersects(mob.getBoundingBox())) {
                         mob.teleportTo(this.getX(), this.getY(), this.getZ());
                     }
 
@@ -233,12 +405,14 @@ public class KeyEntity extends Mob {
                     if (now - updatedStateTime >= rechargeCooldown) {
                         mob.discard();
                         summonedMobId = null;
+                        postProcessMob(this.summonedMobRL);
                         setState(KeyEntityState.NORMAL);
                     }
                 } else if (multiPhaseBoss && phaseChain != null && !phaseChain.isEmpty()
                         && phaseIndex >= 0 && phaseIndex < phaseChain.size() - 1) {
                     checkMob();
                 } else {
+                    postProcessMob(this.summonedMobRL);
                     String lastId = this.summonedMobRL;
                     this.summonedMobRL = "";
                     this.summonedMobId = null;
@@ -278,8 +452,19 @@ public class KeyEntity extends Mob {
         }
     }
 
+    private void postProcessMob(String spawnedMobId) {
+        BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(spawnedMobId);
+        if (data != null && data.isWater) {
+            LOGGER.info("[Daily Boss DEBUG]: clearing water");
+            startWaterClearBox();
+        }
+    }
+
     private ResourceLocation preProcessMob(String selectedMobId) {
         BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
+        if (data != null && data.isWater) {
+            startWaterFillBox();
+        }
         if (data != null && data.isMultiPhase()) {
             this.phaseChain = new ArrayList<>(data.phases);
             this.phaseIndex = 0;
@@ -308,9 +493,19 @@ public class KeyEntity extends Mob {
 
         String nextPhaseId = this.phaseChain.get(this.phaseIndex + 1);
         String[] parts = nextPhaseId.split(":", 2);
-        double radius = 64.0;
+        double halfXZ = 32.0;
+        double upY = 64.0;
+        double y0 = this.getBoundingBox().minY;
 
-        AABB area = new AABB(this.blockPosition()).inflate(radius);
+        AABB area = new AABB(
+                this.getX() - halfXZ,
+                y0 - 1,
+                this.getZ() - halfXZ,
+                this.getX() + halfXZ,
+                y0 + upY,
+                this.getZ() + halfXZ
+        );
+
         List<Entity> nearby = level().getEntities(this, area, e ->
                 Objects.equals(BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()), ResourceLocation.fromNamespaceAndPath(parts[0], parts[1])));
 
