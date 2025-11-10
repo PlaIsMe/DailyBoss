@@ -81,7 +81,7 @@ dependencies {
     implementation "curse.maven:lionfish-api-1001614:6168249"
     implementation "curse.maven:curios-309927:6529130"
     implementation "curse.maven:lendercataclysm-551586:6906997"
-    implementation "curse.maven:daily-boss-1297381:7205512"
+    implementation "curse.maven:daily-boss-1297381:7205858"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
