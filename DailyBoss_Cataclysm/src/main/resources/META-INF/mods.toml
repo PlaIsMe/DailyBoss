@@ -22,7 +22,7 @@ description='''${mod_description}'''
 [[dependencies.dailyboss_cataclysm]]
     modId="pladailyboss"
     mandatory=true
-    versionRange="[1.5, )"
+    versionRange="[1.6, )"
     ordering="NONE"
     side="BOTH"
 [[dependencies.dailyboss_cataclysm]]
