@@ -585,12 +585,13 @@ public class KeyEntity extends Mob {
                     mob.setTarget(player);
 
                     String spawnedId = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
-                    processMob(spawnedId, mob, (ServerPlayer) player);
 
                     mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                             MobSpawnType.COMMAND, (SpawnGroupData) null);
                     serverLevel.addFreshEntity(mob);
                     spawned = mob;
+
+                    processMob(spawnedId, mob, (ServerPlayer) player);
                 }
                 this.summonedMobRL = selectedMobId;
                 this.summonedMobId = spawned.getUUID();
