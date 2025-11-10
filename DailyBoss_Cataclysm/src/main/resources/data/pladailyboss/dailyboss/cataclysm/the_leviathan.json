@@ -1,7 +1,8 @@
 {
   "is_water": true,
   "loot_table": [
-    "minecraft:chests/bastion_treasure",
-    "minecraft:chests/bastion_other"
+    "minecraft:chests/simple_dungeon",
+    "minecraft:chests/buried_treasure",
+    "minecraft:chests/shipwreck_treasure"
   ]
 }
