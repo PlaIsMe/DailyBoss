@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.pla.dailyboss_cataclysm.mixins",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "dailyboss_cataclysm.mixins.refmap.json",
+  "mixins": [
+    "KeyEntityMixin"
+  ],
+  "client": [
+  ],
+  "minVersion": "0.8"
+}

@@ -1,0 +1,7 @@
+{
+  "loot_table": [
+    "minecraft:chests/bastion_treasure",
+    "minecraft:chests/simple_dungeon",
+    "minecraft:chests/stronghold_crossing"
+  ]
+}

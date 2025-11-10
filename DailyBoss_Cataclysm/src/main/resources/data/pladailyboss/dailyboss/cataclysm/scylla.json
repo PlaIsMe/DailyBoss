@@ -1,0 +1,7 @@
+{
+  "loot_table": [
+    "minecraft:chests/desert_pyramid",
+    "minecraft:chests/simple_dungeon",
+    "minecraft:chests/abandoned_mineshaft"
+  ]
+}
