@@ -583,12 +583,12 @@ public class KeyEntity extends Mob {
                     mob.setTarget(player);
 
                     String spawnedId = ForgeRegistries.ENTITY_TYPES.getKey(type).toString();
-                    processMob(spawnedId, mob, (ServerPlayer) player);
-
                     mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                             MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
                     serverLevel.addFreshEntity(mob);
                     spawned = mob;
+
+                    processMob(spawnedId, mob, (ServerPlayer) player);
                 }
 
                 this.summonedMobId = spawned.getUUID();
