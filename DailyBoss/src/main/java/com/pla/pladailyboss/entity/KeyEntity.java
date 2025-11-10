@@ -384,8 +384,8 @@ public class KeyEntity extends Mob {
                 Entity entity = ((ServerLevel) level()).getEntity(summonedMobId);
 
                 if (entity instanceof Mob mob) {
-                    double halfXZ = 32.0;
-                    double upY    = 64.0;
+                    double halfXZ = 30.0;
+                    double upY    = 62.0;
                     double y0     = this.getBoundingBox().minY;
 
                     AABB leash = new AABB(
