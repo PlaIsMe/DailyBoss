@@ -16,6 +16,10 @@
   <a href="https://www.curseforge.com/minecraft/mc-mods/daily-boss" title="curseforge">
     <img src="https://res.cloudinary.com/dxehc2hn3/image/upload/v1761811729/cruseforge_icon_bg_gucfxc.png" alt="Curseforge" width="80" height="80">
   </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://modrinth.com/mod/daily-boss" title="modrinth" style="text-decoration:none;">
+    <img src="https://res.cloudinary.com/dxehc2hn3/image/upload/v1761815749/modrinth_icon_bg_q4jxrz.png" alt="Modrinth" width="80" height="80">
+  </a>
 </p>
 
 ## License & Use
