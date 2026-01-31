@@ -23,7 +23,7 @@ import java.util.Objects;
 public class KeyEntityMixin {
     private static final Logger LOGGER = LogManager.getLogger();
 
-    @Inject(method = "preProcessMob", at = @At("HEAD"))
+    @Inject(method = "preProcessMob", at = @At("HEAD"), cancellable = true)
     private void addCompat(String selectedMobId, CallbackInfoReturnable<ResourceLocation> cir) {
         KeyEntity self = (KeyEntity) (Object) this;
         if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
