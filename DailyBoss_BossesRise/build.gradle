@@ -81,8 +81,9 @@ repositories {
 }
 
 dependencies {
-    implementation "curse.maven:bossesrise-1314084:6852556"
+    implementation "curse.maven:bossesrise-1314084:7655129"
     implementation "curse.maven:daily-boss-1297381:7192660"
+    implementation "curse.maven:geckolib-388172:7415496"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

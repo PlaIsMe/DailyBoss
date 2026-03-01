@@ -3,9 +3,10 @@ package com.pla.dailyboss_bosses_rise.mixins;
 import com.pla.pladailyboss.entity.KeyEntity;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
-import net.unusual.blockfactorysbosses.entity.InfernalDragonEntity;
-import net.unusual.blockfactorysbosses.entity.SandwormEntity;
-import net.unusual.blockfactorysbosses.entity.UnderworldKnightEntity;
+import net.unusual.block_factorys_bosses.entity.boss.dragon.boss.InfernalDragonEntity;
+import net.unusual.block_factorys_bosses.entity.boss.knight.UnderworldKnightEntity;
+import net.unusual.block_factorys_bosses.entity.boss.sandworm.SandwormEntity;
+import net.unusual.block_factorys_bosses.entity.boss.yeti.YetiEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,13 +23,16 @@ public class KeyEntityMixin {
     @Inject(method = "processMob", at = @At("TAIL"))
     private void addCompat(String spawnedMobId, Mob mob, ServerPlayer player, CallbackInfo ci) {
         if (Objects.equals(spawnedMobId, "block_factorys_bosses:sandworm") && mob instanceof SandwormEntity sandworm) {
-            sandworm.getEntityData().set(SandwormEntity.DATA_spawn_animtime, 180);
+            sandworm.setHiddenUnderground(false);
+            sandworm.triggerAnim("intro");
         }
-        if (Objects.equals(spawnedMobId, "block_factorys_bosses:infernal_dragon") && mob instanceof InfernalDragonEntity dragon) {
-            dragon.getEntityData().set(InfernalDragonEntity.DATA_spawn_animtime, 236);
+        if (Objects.equals(spawnedMobId, "block_factorys_bosses:yeti") && mob instanceof YetiEntity yeti) {
+            yeti.setState(YetiEntity.YetiState.INTRO.toString());
+            yeti.getEntityData().set(YetiEntity.DATA_IS_ENRAGED, 1);
         }
         if (Objects.equals(spawnedMobId, "block_factorys_bosses:underworld_knight") && mob instanceof UnderworldKnightEntity knight) {
-            knight.getEntityData().set(UnderworldKnightEntity.DATA_spawn_animtime, 226);
+            knight.getEntityData().set(UnderworldKnightEntity.DATA_BOSS_PHASE, -1);
+            knight.setState("idle");
         }
     }
 }
