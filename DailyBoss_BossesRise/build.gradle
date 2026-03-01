@@ -74,10 +74,6 @@ repositories {
     maven {
         url = uri("https://cursemaven.com")
     }
-    maven {
-        name = "GeckoLib"
-        url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
-    }
     flatDir {
         dirs 'libs'
     }
@@ -85,9 +81,8 @@ repositories {
 }
 
 dependencies {
-    implementation "curse.maven:bossesrise-1314084:7655129"
+    implementation "curse.maven:bossesrise-1314084:6852556"
     implementation "curse.maven:daily-boss-1297381:7192660"
-    implementation "software.bernie.geckolib:geckolib-neoforge-1.21.1:4.6.5"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
