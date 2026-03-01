@@ -41,11 +41,11 @@ public class KeyEntityMixin {
                     self.level().playSound(null, self.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL,
                             SoundSource.BLOCKS, 1.0f, 1.0f);
                     self.setState(KeyEntityState.DISAPPEARED);
+                    cir.setReturnValue(null);
+                    cir.cancel();
                 } else {
                     LOGGER.warn("[Daily Boss] BrutalBosses random spawn failed for {}", selectedMobId);
                 }
-                cir.setReturnValue(null);
-                cir.cancel();
             }
         }
     }
