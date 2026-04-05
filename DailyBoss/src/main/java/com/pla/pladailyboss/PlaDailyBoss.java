@@ -5,10 +5,10 @@ import com.pla.pladailyboss.config.PlaDailyBossConfig;
 import com.pla.pladailyboss.data.DailyBossLoader;
 import com.pla.pladailyboss.entity.KeyEntity;
 import com.pla.pladailyboss.init.BlockInit;
+import com.pla.pladailyboss.init.CommandInit;
 import com.pla.pladailyboss.init.EntityInit;
 import com.pla.pladailyboss.init.ItemInit;
 import com.pla.pladailyboss.network.NetworkRegister;
-import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -21,6 +21,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
@@ -37,6 +38,9 @@ public class PlaDailyBoss
         modEventBus.addListener(NetworkRegister::register);
         modEventBus.addListener(this::registerAttributes);
 
+        IEventBus eventBus = NeoForge.EVENT_BUS;
+        eventBus.addListener(this::registerCommands);
+
         modContainer.registerConfig(ModConfig.Type.SERVER, PlaDailyBossConfig.SPEC);
 
         EntityInit.register(modEventBus);
@@ -52,6 +56,10 @@ public class PlaDailyBoss
 
     public void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(EntityInit.KEY_ENTITY.get(), KeyEntity.createAttributes().build());
+    }
+
+    private void registerCommands(RegisterCommandsEvent event) {
+        CommandInit.register(event.getDispatcher());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -72,8 +80,6 @@ public class PlaDailyBoss
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
-            LOGGER.info("Client setup loaded. Logged in as: {}", Minecraft.getInstance().getUser().getName());
         }
     }
-
 }

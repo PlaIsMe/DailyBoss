@@ -38,7 +38,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
     }
 
     @Override
-    protected int getBlockLightLevel(KeyEntity pEntity, BlockPos pPos) {
+    protected int getBlockLightLevel(@NotNull KeyEntity pEntity, @NotNull BlockPos pPos) {
         return 15;
     }
 
@@ -96,7 +96,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
                         false,
                         pPoseStack.last().pose(),
                         pBuffer,
-                        Font.DisplayMode.SEE_THROUGH,
+                        Font.DisplayMode.NORMAL,
                         0,
                         LightTexture.FULL_BRIGHT
                 );
