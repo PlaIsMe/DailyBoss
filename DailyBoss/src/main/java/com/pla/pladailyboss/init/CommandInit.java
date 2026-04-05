@@ -62,7 +62,7 @@ public class CommandInit {
 
         int count = 0;
         for (KeyEntity key : keys) {
-            key.discard();
+            key.deletePermanently();
             count++;
         }
 

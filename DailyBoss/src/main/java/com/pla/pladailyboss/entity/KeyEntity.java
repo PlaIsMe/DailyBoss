@@ -58,6 +58,7 @@ public class KeyEntity extends Mob {
     private int phaseIndex = -1;
     private String activeBossDataId = "";
     private long activeEncounterTimeoutMs = -1L;
+    private boolean bypassRecoveryOnRemove = false;
 
     private static final String NBT_ACTIVE_BOSS_DATA_ID = "ActiveBossDataId";
     private static final String NBT_ACTIVE_ENCOUNTER_TIMEOUT_MS = "ActiveEncounterTimeoutMs";
@@ -892,10 +893,16 @@ public class KeyEntity extends Mob {
     protected void doPush(@NotNull Entity other) {
     }
 
+    public void deletePermanently() {
+        this.bypassRecoveryOnRemove = true;
+        this.cooldownBossBar.removeAllPlayers();
+        this.discard();
+    }
+
     @Override
     public void remove(@NotNull Entity.RemovalReason reason) {
         if (!this.level().isClientSide && !this.spawningRecoveryClone) {
-            if (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED) {
+            if (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED && !this.bypassRecoveryOnRemove) {
                 this.cooldownBossBar.removeAllPlayers();
                 this.spawnDisabledReplacement();
             }
