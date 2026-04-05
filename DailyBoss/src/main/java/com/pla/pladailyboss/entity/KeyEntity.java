@@ -56,6 +56,13 @@ public class KeyEntity extends Mob {
     private static final Logger LOGGER = LogManager.getLogger();
     private List<String> phaseChain = Collections.emptyList();
     private int phaseIndex = -1;
+    private String activeBossDataId = "";
+    private long activeEncounterTimeoutMs = -1L;
+
+    private static final String NBT_ACTIVE_BOSS_DATA_ID = "ActiveBossDataId";
+    private static final String NBT_ACTIVE_ENCOUNTER_TIMEOUT_MS = "ActiveEncounterTimeoutMs";
+
+    public static final String TAG_DISABLE_MOB_LOOT = "PlaDailyBossDisableMobLoot";
 
     private boolean wfActive = false;
     private int wfMinX, wfMaxX, wfMinZ, wfMaxZ;
@@ -159,6 +166,37 @@ public class KeyEntity extends Mob {
         this.refreshDimensions();
     }
 
+    private boolean hasCustomEncounterTimeout() {
+        return this.activeEncounterTimeoutMs > 0L;
+    }
+
+    private long getCurrentDisappearDurationMs() {
+        return this.hasCustomEncounterTimeout() ? this.activeEncounterTimeoutMs : this.rechargeCooldown;
+    }
+
+    private void startDisabledCooldownNow() {
+        this.updatedStateTime = System.currentTimeMillis();
+        this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
+        setState(KeyEntityState.DISABLED);
+    }
+
+    private void clearActiveEncounter() {
+        this.summonedMobId = null;
+        this.summonedMobRL = "";
+        this.phaseChain = Collections.emptyList();
+        this.phaseIndex = -1;
+        this.multiPhaseBoss = false;
+        this.activeBossDataId = "";
+        this.activeEncounterTimeoutMs = -1L;
+    }
+
+    private void applyBossFlagsToMob(Mob mob) {
+        BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(this.activeBossDataId);
+        if (data != null && data.disableMobLoot) {
+            mob.getPersistentData().putBoolean(TAG_DISABLE_MOB_LOOT, true);
+        }
+    }
+
     private void updateCooldownBossBar() {
         if (!(this.level() instanceof ServerLevel serverLevel)) return;
 
@@ -171,7 +209,7 @@ public class KeyEntity extends Mob {
             return;
         }
 
-        long cooldown = Math.max(1L, this.getRechargeCooldown());
+        long cooldown = Math.max(1L, this.getCurrentDisappearDurationMs());
         long remaining = Math.max(0L, cooldown - (System.currentTimeMillis() - this.getUpdatedStateTime()));
         float progress = Mth.clamp((float) remaining / (float) cooldown, 0.0F, 1.0F);
 
@@ -343,6 +381,9 @@ public class KeyEntity extends Mob {
         pCompound.putInt("wdMaxX", wdMaxX);
         pCompound.putInt("wdMinZ", wdMinZ);
         pCompound.putInt("wdMaxZ", wdMaxZ);
+
+        pCompound.putString(NBT_ACTIVE_BOSS_DATA_ID, this.activeBossDataId);
+        pCompound.putLong(NBT_ACTIVE_ENCOUNTER_TIMEOUT_MS, this.activeEncounterTimeoutMs);
     }
 
     @Override
@@ -422,6 +463,11 @@ public class KeyEntity extends Mob {
             wdMinZ = wfMinZ - CLEAR_MARGIN;
             wdMaxZ = wfMaxZ + CLEAR_MARGIN;
         }
+
+        this.activeBossDataId = pCompound.contains(NBT_ACTIVE_BOSS_DATA_ID)
+                ? pCompound.getString(NBT_ACTIVE_BOSS_DATA_ID) : "";
+        this.activeEncounterTimeoutMs = pCompound.contains(NBT_ACTIVE_ENCOUNTER_TIMEOUT_MS)
+                ? pCompound.getLong(NBT_ACTIVE_ENCOUNTER_TIMEOUT_MS) : -1L;
     }
 
     private void tryRebuildPhaseChainFromData() {
@@ -514,30 +560,43 @@ public class KeyEntity extends Mob {
                     }
 
                     long now = System.currentTimeMillis();
-                    if (now - updatedStateTime >= rechargeCooldown) {
+                    long activeDuration = this.getCurrentDisappearDurationMs();
+
+                    if (now - updatedStateTime >= activeDuration) {
+                        boolean hadCustomEncounterTimeout = this.hasCustomEncounterTimeout();
+                        String bossDataId = this.activeBossDataId.isEmpty() ? this.summonedMobRL : this.activeBossDataId;
+
                         mob.discard();
-                        summonedMobId = null;
-                        postProcessMob(this.summonedMobRL);
-                        setState(KeyEntityState.NORMAL);
+                        postProcessMob(bossDataId);
+                        clearActiveEncounter();
+
+                        if (hadCustomEncounterTimeout) {
+                            startDisabledCooldownNow();
+                        } else {
+                            setState(KeyEntityState.NORMAL);
+                        }
                     }
                 } else if (multiPhaseBoss && phaseChain != null && !phaseChain.isEmpty()
                         && phaseIndex >= 0 && phaseIndex < phaseChain.size() - 1) {
                     checkMob();
                 } else {
-                    postProcessMob(this.summonedMobRL);
-                    String lastId = this.summonedMobRL;
-                    this.summonedMobRL = "";
-                    this.summonedMobId = null;
-                    this.phaseChain = Collections.emptyList();
-                    this.phaseIndex = -1;
-                    this.multiPhaseBoss = false;
-                    setState(KeyEntityState.DISABLED);
+                    String bossDataId = this.activeBossDataId.isEmpty() ? this.summonedMobRL : this.activeBossDataId;
+                    boolean hadCustomEncounterTimeout = this.hasCustomEncounterTimeout();
 
-                    BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(lastId);
+                    postProcessMob(bossDataId);
+                    clearActiveEncounter();
+
+                    if (hadCustomEncounterTimeout) {
+                        startDisabledCooldownNow();
+                    } else {
+                        setState(KeyEntityState.DISABLED);
+                    }
+
+                    BossLootData data = DailyBossLoader.BOSS_LOOT_TABLES.get(bossDataId);
                     List<String> lootTables = (data != null) ? data.lootTables : Collections.emptyList();
 
-                    if (!lootTables.isEmpty()) {
-                        for (int i = 0; i < 5; i++) {
+                    if (data != null && !lootTables.isEmpty()) {
+                        for (int i = 0; i < data.lootTableRolls; i++) {
                             String lootTableId = lootTables.get(RANDOM.nextInt(lootTables.size()));
                             RewardEvent.dropLoot(
                                     (ServerLevel) level(),
@@ -547,7 +606,16 @@ public class KeyEntity extends Mob {
                             );
                         }
                     } else {
-                        LOGGER.warn("[Daily Boss] No loot tables configured for '{}'; skipping loot drop.", lastId);
+                        LOGGER.warn("[Daily Boss] No loot tables configured for '{}'; skipping loot drop.", bossDataId);
+                    }
+
+                    if (data != null && !data.customLoot.isEmpty()) {
+                        RewardEvent.dropCustomLoot(
+                                (ServerLevel) level(),
+                                this.getOnPos(),
+                                data.customLoot,
+                                data.customLootRolls
+                        );
                     }
 
                     int xpAmount = 1395;
@@ -621,6 +689,9 @@ public class KeyEntity extends Mob {
 
         if (!nearby.isEmpty()) {
             Entity next = nearby.get(0);
+            if (next instanceof Mob nextMob) {
+                applyBossFlagsToMob(nextMob);
+            }
             this.summonedMobId = next.getUUID();
             this.summonedMobRL = nextPhaseId;
 
@@ -651,6 +722,10 @@ public class KeyEntity extends Mob {
             }
         }
 
+        BossLootData selectedData = DailyBossLoader.BOSS_LOOT_TABLES.get(selectedMobId);
+        this.activeBossDataId = selectedMobId;
+        this.activeEncounterTimeoutMs = selectedData != null ? selectedData.encounterTimeoutMs : -1L;
+
         ResourceLocation mobRL = preProcessMob(selectedMobId);
 
         EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
@@ -673,7 +748,8 @@ public class KeyEntity extends Mob {
                         loadedMob.setPersistenceRequired();
                         loadedMob.setTarget(player);
                         loadedMob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
-                                MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
+                                MobSpawnType.COMMAND, null, null);
+                        applyBossFlagsToMob(loadedMob);
                         serverLevel.addFreshEntity(loadedMob);
 
                         this.summonedMobId = loadedMob.getUUID();
@@ -701,6 +777,9 @@ public class KeyEntity extends Mob {
                             MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
                     serverLevel.addFreshEntity(mob);
                     spawned = mob;
+                    if (spawned != null) {
+                        applyBossFlagsToMob(spawned);
+                    }
 
                     processMob(spawnedId, mob, (ServerPlayer) player);
                 }
@@ -850,8 +929,7 @@ public class KeyEntity extends Mob {
             replacement.phaseIndex = -1;
             replacement.multiPhaseBoss = false;
             replacement.stopAllWaterOps();
-
-            replacement.setState(KeyEntityState.DISABLED);
+            replacement.startDisabledCooldownNow();
 
             serverLevel.addFreshEntity(replacement);
         } finally {
