@@ -70,7 +70,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
             );
 
             pPoseStack.popPose();
-        } else {
+        } else if (pEntity.getState() == KeyEntityState.DISABLED)  {
             long updatedTime = pEntity.getUpdatedStateTime();
             long remaining = pEntity.getRechargeCooldown() - (System.currentTimeMillis() - updatedTime);
 

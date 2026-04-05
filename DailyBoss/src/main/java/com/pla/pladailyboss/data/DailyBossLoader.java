@@ -57,6 +57,59 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
         return lootTables;
     }
 
+    private boolean parseBoolean(JsonObject obj, String key, boolean defaultValue) {
+        if (!obj.has(key)) return defaultValue;
+        JsonElement e = obj.get(key);
+        return e.isJsonPrimitive() && e.getAsJsonPrimitive().isBoolean() ? e.getAsBoolean() : defaultValue;
+    }
+
+    private int parseInt(JsonObject obj, String key, int defaultValue) {
+        if (!obj.has(key)) return defaultValue;
+        JsonElement e = obj.get(key);
+        return e.isJsonPrimitive() && e.getAsJsonPrimitive().isNumber() ? e.getAsInt() : defaultValue;
+    }
+
+    private long parseLong(JsonObject obj, String key, long defaultValue) {
+        if (!obj.has(key)) return defaultValue;
+        JsonElement e = obj.get(key);
+        return e.isJsonPrimitive() && e.getAsJsonPrimitive().isNumber() ? e.getAsLong() : defaultValue;
+    }
+
+    private List<CustomLootEntry> parseCustomLoot(JsonElement element) {
+        List<CustomLootEntry> list = new ArrayList<>();
+        if (!element.isJsonObject()) return list;
+
+        JsonObject obj = element.getAsJsonObject();
+        JsonElement custom = obj.get("custom_loot");
+        if (custom == null) return list;
+
+        if (custom.isJsonArray()) {
+            for (JsonElement e : custom.getAsJsonArray()) {
+                addCustomLootEntry(e, list);
+            }
+        } else {
+            addCustomLootEntry(custom, list);
+        }
+
+        return list;
+    }
+
+    private void addCustomLootEntry(JsonElement element, List<CustomLootEntry> list) {
+        if (element.isJsonPrimitive()) {
+            list.add(new CustomLootEntry(element.getAsString(), 1));
+            return;
+        }
+
+        if (!element.isJsonObject()) return;
+
+        JsonObject obj = element.getAsJsonObject();
+        if (!obj.has("item")) return;
+
+        String itemId = obj.get("item").getAsString();
+        int count = parseInt(obj, "count", 1);
+        list.add(new CustomLootEntry(itemId, count));
+    }
+
     @Override
     protected void apply(Map<ResourceLocation, JsonElement> objectMap, @NotNull ResourceManager resourceManager, @NotNull ProfilerFiller profiler) {
         BOSS_LOOT_TABLES.clear();
@@ -80,11 +133,27 @@ public class DailyBossLoader extends SimpleJsonResourceReloadListener {
             }
             String mobId = String.format("%s:%s", namespace, mobPath);
             JsonObject obj = element.getAsJsonObject();
+            long encounterTimeoutMs = parseLong(obj, "encounter_timeout_ms", -1L);
+            boolean disableMobLoot = parseBoolean(obj, "disable_mob_loot", false);
+            List<CustomLootEntry> customLoot = parseCustomLoot(element);
+            int lootTableRolls = parseInt(obj, "loot_table_rolls", 5);
+            int customLootRolls = parseInt(obj, "custom_loot_rolls", 2);
             JsonObject nbt = obj.has("nbt") && obj.get("nbt").isJsonObject() ? obj.getAsJsonObject("nbt") : new JsonObject();
 
             List<String> phases = parsePhases(element);
             boolean isWater = parseIsWater(element);
-            BOSS_LOOT_TABLES.put(mobId, new BossLootData(lootTables, nbt, bossLootDataState, phases, isWater));
+            BOSS_LOOT_TABLES.put(mobId, new BossLootData(
+                    lootTables,
+                    nbt,
+                    bossLootDataState,
+                    phases,
+                    isWater,
+                    encounterTimeoutMs,
+                    disableMobLoot,
+                    customLoot,
+                    lootTableRolls,
+                    customLootRolls
+            ));
         }
     }
 
