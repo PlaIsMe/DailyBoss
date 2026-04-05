@@ -17,11 +17,13 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.BossEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -44,9 +46,10 @@ import org.apache.logging.log4j.LogManager;
 
 public class KeyEntity extends Mob {
     private UUID summonedMobId;
-    private String summonedMobRL;
-    private KeyEntityState state;
-    private long updatedStateTime;
+    private String summonedMobRL = "";
+    private KeyEntityState state = KeyEntityState.NORMAL;
+    private long updatedStateTime = 0L;
+    private boolean spawningRecoveryClone = false;
     private boolean multiPhaseBoss = false;
     private final long rechargeCooldown = PlaDailyBossConfig.COOL_DOWN.get();
     private static final Random RANDOM = new Random();
@@ -102,6 +105,12 @@ public class KeyEntity extends Mob {
         this.multiPhaseBoss = multiPhaseBoss;
     }
 
+    private final ServerBossEvent cooldownBossBar = new ServerBossEvent(
+            Component.literal("Key Recharge"),
+            BossEvent.BossBarColor.GREEN,
+            BossEvent.BossBarOverlay.PROGRESS
+    );
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -110,11 +119,83 @@ public class KeyEntity extends Mob {
         this.entityData.define(RECHARGE_COOLDOWN, 0L);
     }
 
+    @Override
+    public void onSyncedDataUpdated(@NotNull EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+
+        if (DATA_STATE.equals(accessor)) {
+            this.state = KeyEntityState.values()[this.entityData.get(DATA_STATE)];
+            this.refreshDimensions();
+        }
+    }
+
+    @Override
+    public @NotNull EntityDimensions getDimensions(@NotNull Pose pose) {
+        return this.getState() == KeyEntityState.DISAPPEARED
+                ? EntityDimensions.fixed(0.0F, 0.0F)
+                : super.getDimensions(pose);
+    }
+
+    @Override
+    public boolean canBeHitByProjectile() {
+        return false;
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
     public KeyEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         this.noPhysics = true;
-        this.setBoundingBox(new AABB(getX(), getY(), getZ(), getX(), getY(), getZ()));
         this.entityData.set(RECHARGE_COOLDOWN, this.rechargeCooldown);
+
+        this.cooldownBossBar.setVisible(false);
+        this.cooldownBossBar.setDarkenScreen(false);
+        this.cooldownBossBar.setPlayBossMusic(false);
+        this.cooldownBossBar.setCreateWorldFog(false);
+
+        this.refreshDimensions();
+    }
+
+    private void updateCooldownBossBar() {
+        if (!(this.level() instanceof ServerLevel serverLevel)) return;
+
+        KeyEntityState state = this.getState();
+        boolean show = state == KeyEntityState.DISAPPEARED;
+
+        if (!show) {
+            this.cooldownBossBar.setVisible(false);
+            this.cooldownBossBar.removeAllPlayers();
+            return;
+        }
+
+        long cooldown = Math.max(1L, this.getRechargeCooldown());
+        long remaining = Math.max(0L, cooldown - (System.currentTimeMillis() - this.getUpdatedStateTime()));
+        float progress = Mth.clamp((float) remaining / (float) cooldown, 0.0F, 1.0F);
+
+        long totalSeconds = remaining / 1000L;
+        long hours = totalSeconds / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        long seconds = totalSeconds % 60L;
+
+        this.cooldownBossBar.setName(Component.literal(
+                String.format("Time remaining %02d:%02d:%02d", hours, minutes, seconds)
+        ));
+        this.cooldownBossBar.setProgress(progress);
+        this.cooldownBossBar.setVisible(true);
+
+        for (ServerPlayer sp : serverLevel.players()) {
+            boolean near = sp.distanceToSqr(this) <= 48.0D * 48.0D;
+            boolean already = this.cooldownBossBar.getPlayers().contains(sp);
+
+            if (near && !already) {
+                this.cooldownBossBar.addPlayer(sp);
+            } else if (!near && already) {
+                this.cooldownBossBar.removePlayer(sp);
+            }
+        }
     }
 
     public void startWaterFillBox() {
@@ -206,11 +287,36 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag pCompound) {
+    public boolean skipAttackInteraction(@NotNull Entity attacker) {
+        return true;
+    }
+
+    @Override
+    public boolean isPickable() {
+        return this.getState() != KeyEntityState.DISAPPEARED;
+    }
+
+    @Override
+    public boolean hurt(@NotNull DamageSource source, float amount) {
+        return false;
+    }
+
+    @Override
+    protected void actuallyHurt(@NotNull DamageSource source, float amount) {
+    }
+
+    @Override
+    public boolean isInvulnerableTo(@NotNull DamageSource source) {
+        return true;
+    }
+
+
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
         if (summonedMobId != null) pCompound.putUUID("SummonedMobUUID", summonedMobId);
         pCompound.putString("SummonedMobRL", summonedMobRL);
-        pCompound.putString("KeyState", state.name());
+        pCompound.putString("KeyState", this.getState().name());
         pCompound.putLong("UpdatedStateTime", updatedStateTime);
         pCompound.putBoolean("MultiPhaseBoss", multiPhaseBoss);
         if (phaseChain != null && !phaseChain.isEmpty()) {
@@ -240,7 +346,7 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag pCompound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         if (pCompound.contains("SummonedMobUUID")) {
             try {
@@ -340,10 +446,16 @@ public class KeyEntity extends Mob {
     public void tick() {
         super.tick();
 
+        if (!this.level().isClientSide) {
+            updateCooldownBossBar();
+        }
+
+        KeyEntityState state = this.getState();
         Player player = level().getNearestPlayer(this, 10);
         if (player != null) {
             this.lookAt(EntityAnchorArgument.Anchor.EYES, player.position());
         }
+
         if (!level().isClientSide) {
             if (level() instanceof ServerLevel serverLevel) {
                 long now = serverLevel.getGameTime();
@@ -517,27 +629,29 @@ public class KeyEntity extends Mob {
         }
     }
 
-    private boolean spawnBoss(@NotNull Player player) {
-        List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
-        if (mobIds.isEmpty()) {
-            player.displayClientMessage(
-                    Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
-                            .withStyle(style -> style.withColor(0xFFFF00)),
-                    true
-            );
-            return false;
-        }
+    public boolean spawnBoss(@NotNull Player player, String forceSpawnMob) {
         String selectedMobId;
-        if (!PlaDailyBossConfig.FORCE_SPAWN.get().isEmpty()) {
-            selectedMobId = PlaDailyBossConfig.FORCE_SPAWN.get();
+        if (forceSpawnMob != null && !forceSpawnMob.isBlank()) {
+            selectedMobId = forceSpawnMob;
         } else {
-            selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
+            List<String> mobIds = DailyBossLoader.getListBasedOnKilledMob((ServerPlayer) player, player.getServer());
+            if (mobIds.isEmpty()) {
+                player.displayClientMessage(
+                        Component.literal("You're too weak. Come back after you've defeated at least one boss or mini-boss.")
+                                .withStyle(style -> style.withColor(0xFFFF00)),
+                        true
+                );
+                return false;
+            }
+
+            if (!PlaDailyBossConfig.FORCE_SPAWN.get().isEmpty()) {
+                selectedMobId = PlaDailyBossConfig.FORCE_SPAWN.get();
+            } else {
+                selectedMobId = mobIds.get(RANDOM.nextInt(mobIds.size()));
+            }
         }
 
         ResourceLocation mobRL = preProcessMob(selectedMobId);
-        if (mobRL == null) {
-            return true;
-        }
 
         EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
         boolean usedCustomNBT = false;
@@ -563,7 +677,7 @@ public class KeyEntity extends Mob {
                         serverLevel.addFreshEntity(loadedMob);
 
                         this.summonedMobId = loadedMob.getUUID();
-                        this.summonedMobRL = ForgeRegistries.ENTITY_TYPES.getKey(loadedMob.getType()).toString();
+                        this.summonedMobRL = Objects.requireNonNull(ForgeRegistries.ENTITY_TYPES.getKey(loadedMob.getType())).toString();
                         usedCustomNBT = true;
 
                         processMob(this.summonedMobRL, loadedMob, (ServerPlayer) player);
@@ -582,7 +696,7 @@ public class KeyEntity extends Mob {
                     mob.setPersistenceRequired();
                     mob.setTarget(player);
 
-                    String spawnedId = ForgeRegistries.ENTITY_TYPES.getKey(type).toString();
+                    String spawnedId = Objects.requireNonNull(ForgeRegistries.ENTITY_TYPES.getKey(type)).toString();
                     mob.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(this.blockPosition()),
                             MobSpawnType.COMMAND, (SpawnGroupData) null, (CompoundTag) null);
                     serverLevel.addFreshEntity(mob);
@@ -606,38 +720,34 @@ public class KeyEntity extends Mob {
     @Override
     protected @NotNull InteractionResult mobInteract(@NotNull Player player, @NotNull InteractionHand hand) {
         if (!level().isClientSide && hand == InteractionHand.MAIN_HAND) {
+            KeyEntityState state = this.getState();
+
             if (state == KeyEntityState.DISABLED) {
                 long remaining = this.rechargeCooldown - (System.currentTimeMillis() - updatedStateTime);
                 long seconds = (remaining / 1000) % 60;
                 long minutes = (remaining / (1000 * 60)) % 60;
                 long hours = remaining / (1000 * 60 * 60);
+
                 player.displayClientMessage(
                         Component.literal("Come back after " + hours + "h " + minutes + "m " + seconds + "s")
                                 .withStyle(style -> style.withColor(0xFFFF00)),
                         true
                 );
-                return InteractionResult.PASS;
+                return InteractionResult.SUCCESS;
             }
 
             if (state == KeyEntityState.DISAPPEARED) {
                 return InteractionResult.PASS;
             }
 
-            if (spawnBoss(player)) {
-                return InteractionResult.SUCCESS;
-            } else {
-                return InteractionResult.PASS;
-            }
+            return spawnBoss(player, null) ? InteractionResult.SUCCESS : InteractionResult.PASS;
         }
 
         return super.mobInteract(player, hand);
     }
 
     public KeyEntityState getState() {
-        if (level().isClientSide) {
-            return KeyEntityState.values()[this.entityData.get(DATA_STATE)];
-        }
-        return this.state;
+        return KeyEntityState.values()[this.entityData.get(DATA_STATE)];
     }
 
     public Long getUpdatedStateTime() {
@@ -664,17 +774,18 @@ public class KeyEntity extends Mob {
             this.noPhysics = true;
             this.updatedStateTime = System.currentTimeMillis();
             this.entityData.set(UPDATED_STATE_TIME, this.updatedStateTime);
-            this.refreshDimensions();
         } else {
             this.setInvisible(false);
             this.setSilent(false);
             this.noPhysics = false;
-            this.refreshDimensions();
         }
+        this.refreshDimensions();
         if (!this.level().isClientSide) {
-            ((ServerLevel) this.level()).sendParticles(ParticleTypes.END_ROD,
+            ((ServerLevel) this.level()).sendParticles(
+                    ParticleTypes.END_ROD,
                     this.getX(), this.getY() + 1.0, this.getZ(),
-                    20, 0.3, 0.3, 0.3, 0.01);
+                    20, 0.3, 0.3, 0.3, 0.01
+            );
         }
     }
 
@@ -682,16 +793,6 @@ public class KeyEntity extends Mob {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20D)
                 .add(Attributes.MOVEMENT_SPEED, 0.0D);
-    }
-
-    @Override
-    public boolean hurt(@NotNull DamageSource source, float amount) {
-        return false;
-    }
-
-    @Override
-    public boolean isInvulnerableTo(@NotNull DamageSource source) {
-        return true;
     }
 
     @Override
@@ -713,24 +814,53 @@ public class KeyEntity extends Mob {
     }
 
     @Override
-    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
-        return false;
-    }
-
-    @Override
-    public void remove(@NotNull RemovalReason reason) {
-        if (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED) {
-            return;
+    public void remove(@NotNull Entity.RemovalReason reason) {
+        if (!this.level().isClientSide && !this.spawningRecoveryClone) {
+            if (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED) {
+                this.cooldownBossBar.removeAllPlayers();
+                this.spawnDisabledReplacement();
+            }
         }
+
         super.remove(reason);
     }
 
-    @Override
-    public void die(@NotNull DamageSource cause) {
+
+    private void spawnDisabledReplacement() {
+        if (!(this.level() instanceof ServerLevel serverLevel)) return;
+        if (this.spawningRecoveryClone) return;
+
+        this.spawningRecoveryClone = true;
+        try {
+            Entity created = this.getType().create(serverLevel);
+            if (!(created instanceof KeyEntity replacement)) {
+                LOGGER.error("[Daily Boss] Failed to recreate KeyEntity after forced removal.");
+                return;
+            }
+
+            replacement.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
+
+            if (this.hasCustomName()) {
+                replacement.setCustomName(this.getCustomName());
+            }
+            replacement.setCustomNameVisible(this.isCustomNameVisible());
+            replacement.summonedMobId = null;
+            replacement.summonedMobRL = "";
+            replacement.phaseChain = Collections.emptyList();
+            replacement.phaseIndex = -1;
+            replacement.multiPhaseBoss = false;
+            replacement.stopAllWaterOps();
+
+            replacement.setState(KeyEntityState.DISABLED);
+
+            serverLevel.addFreshEntity(replacement);
+        } finally {
+            this.spawningRecoveryClone = false;
+        }
     }
 
     @Override
-    public boolean canBeCollidedWith() {
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
         return false;
     }
 
@@ -742,15 +872,5 @@ public class KeyEntity extends Mob {
     @Override
     public boolean canBeSeenAsEnemy() {
         return false;
-    }
-
-    @Override
-    public boolean isAttackable() {
-        return false;
-    }
-
-    @Override
-    public boolean isPickable() {
-        return this.state != KeyEntityState.DISAPPEARED;
     }
 }

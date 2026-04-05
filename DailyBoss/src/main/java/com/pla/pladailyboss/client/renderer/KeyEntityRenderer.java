@@ -4,13 +4,13 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.pla.pladailyboss.PlaDailyBoss;
 import com.pla.pladailyboss.entity.KeyEntity;
-import com.pla.pladailyboss.enums.BossLootDataState;
 import com.pla.pladailyboss.enums.KeyEntityState;
 import com.pla.pladailyboss.init.BlockInit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -19,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraftforge.fml.ModList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,7 +40,7 @@ public class KeyEntityRenderer extends MobRenderer<KeyEntity, KeyEntityModel<Key
     }
 
     @Override
-    protected int getBlockLightLevel(KeyEntity pEntity, BlockPos pPos) {
+    protected int getBlockLightLevel(@NotNull KeyEntity pEntity, @NotNull BlockPos pPos) {
         return 15;
     }
 

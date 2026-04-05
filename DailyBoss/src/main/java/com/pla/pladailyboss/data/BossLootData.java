@@ -3,7 +3,6 @@ package com.pla.pladailyboss.data;
 import com.google.gson.JsonObject;
 import com.pla.pladailyboss.enums.BossLootDataState;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
