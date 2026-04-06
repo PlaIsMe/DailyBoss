@@ -81,8 +81,8 @@ repositories {
 }
 
 dependencies {
-    implementation "curse.maven:brutal-bosses-dungeon-557999:6622621"
-    implementation "curse.maven:daily-boss-1297381:7192660"
+    implementation "curse.maven:brutal-bosses-dungeon-557999:7662187"
+    implementation "curse.maven:daily-boss-1297381:7880479"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

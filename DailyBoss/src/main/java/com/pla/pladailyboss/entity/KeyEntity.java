@@ -725,6 +725,10 @@ public class KeyEntity extends Mob {
         this.activeEncounterTimeoutMs = selectedData != null ? selectedData.encounterTimeoutMs : -1L;
 
         ResourceLocation mobRL = preProcessMob(selectedMobId);
+        if (mobRL == null) {
+            return true;
+        }
+
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(mobRL);
         boolean usedCustomNBT = false;
 
