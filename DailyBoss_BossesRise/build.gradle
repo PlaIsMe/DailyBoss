@@ -73,8 +73,9 @@ mixin {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation fg.deobf("curse.maven:daily-boss-1297381:7181825")
-    implementation fg.deobf("curse.maven:bossesrise-1314084:6860704")
+    implementation fg.deobf("curse.maven:daily-boss-1297381:7880476")
+    implementation fg.deobf("curse.maven:bossesrise-1314084:7822332")
+    implementation fg.deobf("curse.maven:geckolib-388172:7553267")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 

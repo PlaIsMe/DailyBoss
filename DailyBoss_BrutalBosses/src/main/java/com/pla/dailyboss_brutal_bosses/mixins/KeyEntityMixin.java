@@ -27,7 +27,7 @@ public class KeyEntityMixin {
     private void addCompat(String selectedMobId, CallbackInfoReturnable<ResourceLocation> cir) {
         KeyEntity self = (KeyEntity) (Object) this;
         if (Objects.equals(selectedMobId, "brutalbosses:randomboss")) {
-            if (self.level() instanceof ServerLevel sl) {
+            if (self.getCommandSenderWorld() instanceof ServerLevel sl) {
                 Entity e = BrutalBossesCompat.spawnRandomBossAndReturn(sl, self.getOnPos());
                 if (e instanceof Mob m) {
                     m.setPersistenceRequired();
@@ -38,7 +38,7 @@ public class KeyEntityMixin {
                     self.setPhaseIndex(0);
                     self.setMultiPhaseBoss(false);
 
-                    self.level().playSound(null, self.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL,
+                    self.getCommandSenderWorld().playSound(null, self.blockPosition(), SoundEvents.END_PORTAL_FRAME_FILL,
                             SoundSource.BLOCKS, 1.0f, 1.0f);
                     self.setState(KeyEntityState.DISAPPEARED);
                     cir.setReturnValue(null);
