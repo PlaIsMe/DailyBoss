@@ -73,8 +73,16 @@ mixin {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation fg.deobf("curse.maven:daily-boss-1297381:7181825")
-    implementation fg.deobf("curse.maven:annoying-villagers-full-1308998:7156273")
+    implementation fg.deobf("curse.maven:epicfight-resurrection-1151542:6931390")
+    implementation fg.deobf("curse.maven:annoying-villagers-herobrine-invasion-1308998:7871697")
+    implementation fg.deobf("curse.maven:epic-fight-mod-405076:7617763")
+    implementation fg.deobf("curse.maven:combat-evolution-1377795:7866224")
+    implementation fg.deobf("curse.maven:weapons-of-miracles-epicfight-918614:7517612")
+
+    implementation fg.deobf("curse.maven:epicfight-clash-blade-1408812:7662809")
+    implementation fg.deobf("curse.maven:weapons-of-miracles-epicfight-918614:7517612")
+    implementation fg.deobf("curse.maven:player-mobs-430513:5780869")
+    implementation fg.deobf("curse.maven:daily-boss-1297381:7880476")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
