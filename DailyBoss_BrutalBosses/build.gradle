@@ -19,6 +19,8 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
     copyIdeResources = true
     runs {
         configureEach {
@@ -73,8 +75,8 @@ mixin {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation fg.deobf("curse.maven:brutal-bosses-dungeon-557999:6622620")
-    implementation fg.deobf("curse.maven:daily-boss-1297381:7181825")
+    implementation fg.deobf("curse.maven:daily-boss-1297381:7880476")
+    implementation fg.deobf("curse.maven:brutal-bosses-dungeon-557999:7654710")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 

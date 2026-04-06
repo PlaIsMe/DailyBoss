@@ -728,6 +728,9 @@ public class KeyEntity extends Mob {
         this.activeEncounterTimeoutMs = selectedData != null ? selectedData.encounterTimeoutMs : -1L;
 
         ResourceLocation mobRL = preProcessMob(selectedMobId);
+        if (mobRL == null) {
+            return true;
+        }
 
         EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(mobRL);
         boolean usedCustomNBT = false;
