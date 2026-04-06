@@ -73,8 +73,8 @@ mixin {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    implementation fg.deobf("curse.maven:daily-boss-1297381:7205849")
-    implementation fg.deobf("curse.maven:lendercataclysm-551586:6906993")
+    implementation fg.deobf("curse.maven:daily-boss-1297381:7880476")
+    implementation fg.deobf("curse.maven:lendercataclysm-551586:7867528")
     implementation fg.deobf("curse.maven:curios-309927:6418456")
     implementation fg.deobf("curse.maven:lionfish-api-1001614:5922047")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'

@@ -12,9 +12,9 @@ import com.github.L_Ender.cataclysm.entity.effect.ScreenShake_Entity;
 import com.github.L_Ender.cataclysm.init.ModParticle;
 import com.pla.pladailyboss.entity.KeyEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.Direction;
+import net.minecraft.core.GlobalPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -39,15 +39,14 @@ public class KeyEntityMixin {
         final RandomSource rnd = RandomSource.create();
 
         if (mob instanceof Ancient_Remnant_Entity ancientRemnantEntity) {
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            ancientRemnantEntity.setDimensionType(dimLoc.toString());
-            ancientRemnantEntity.setHomePos(BlockPos.ZERO);
+            ancientRemnantEntity.setHomePos(GlobalPos.of(ancientRemnantEntity.level().dimension(), BlockPos.ZERO));
             ancientRemnantEntity.setNecklace(true);
+            ancientRemnantEntity.setAttackState(2);
         }
         if (mob instanceof Maledictus_Entity maledictusEntity) {
-            double d0 = (double) ((float) self.getX() + 0.5F);
-            double d1 = (double) (self.getY() + 2);
-            double d2 = (double) ((float) self.getZ() + 0.5F);
+            double d0 = (float) self.getX() + 0.5F;
+            double d1 = self.getY() + 2;
+            double d2 = (float) self.getZ() + 0.5F;
             float size = 3.0F;
 
             for (float i = -size; i <= size; ++i) {
@@ -57,7 +56,7 @@ public class KeyEntityMixin {
                         double d4 = (double) i + (rnd.nextDouble() - rnd.nextDouble()) * (double) 0.5F;
                         double d5 = (double) k + (rnd.nextDouble() - rnd.nextDouble()) * (double) 0.5F;
                         double d6 = (double) Mth.sqrt((float) (d3 * d3 + d4 * d4 + d5 * d5)) / (double) 0.5F + rnd.nextGaussian() * 0.05;
-                        serverLevel.addParticle((ParticleOptions) ModParticle.PHANTOM_WING_FLAME.get(), d0, d1, d2, d3 / d6, d4 / d6, d5 / d6);
+                        serverLevel.addParticle(ModParticle.PHANTOM_WING_FLAME.get(), d0, d1, d2, d3 / d6, d4 / d6, d5 / d6);
                         if (i != -size && i != size && j != -size && j != size) {
                             k += size * 2.0F - 1.0F;
                         }
@@ -66,28 +65,22 @@ public class KeyEntityMixin {
             }
 
             ScreenShake_Entity.ScreenShake(serverLevel, Vec3.atCenterOf(self.getOnPos()), 20.0F, 0.1F, 0, 40);
-            maledictusEntity.setTombstonePos(BlockPos.ZERO);
-            maledictusEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            maledictusEntity.setDimensionType(dimLoc.toString());
+            maledictusEntity.setTombstoneDirection(Direction.EAST);
+            maledictusEntity.setHomePos(GlobalPos.of(serverLevel.dimension(), BlockPos.ZERO));
         }
         if (mob instanceof The_Harbinger_Entity harbingerEntity) {
-            harbingerEntity.setHomePos(BlockPos.ZERO);
-            harbingerEntity.heal(harbingerEntity.getMaxHealth());
             harbingerEntity.setIsAct(true);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            harbingerEntity.setDimensionType(dimLoc.toString());
+            harbingerEntity.setHomePos(GlobalPos.of(harbingerEntity.level().dimension(), BlockPos.ZERO));
+            harbingerEntity.heal(harbingerEntity.getMaxHealth());
         }
         if (mob instanceof The_Leviathan_Entity theLeviathanEntity) {
-            theLeviathanEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            theLeviathanEntity.setDimensionType(dimLoc.toString());
+            theLeviathanEntity.setHomePos(GlobalPos.of(serverLevel.dimension(), BlockPos.ZERO));
         }
         if (mob instanceof Ignis_Entity ignisEntity) {
             ScreenShake_Entity.ScreenShake(self.level(), Vec3.atCenterOf(self.getOnPos()), 20.0F, 0.05F, 0, 150);
-            double d0 = (double)((float)self.getOnPos().getX() + 0.5F);
-            double d1 = (double)((float)self.getOnPos().getY() + 0.5F);
-            double d2 = (double)((float)self.getOnPos().getZ() + 0.5F);
+            double d0 = (float)self.getOnPos().getX() + 0.5F;
+            double d1 = (float)self.getOnPos().getY() + 0.5F;
+            double d2 = (float)self.getOnPos().getZ() + 0.5F;
 
             for(float i = -3.0F; i <= 3.0F; ++i) {
                 for(float j = -3.0F; j <= 3.0F; ++j) {
@@ -104,26 +97,20 @@ public class KeyEntityMixin {
                 }
             }
 
-            ignisEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            ignisEntity.setDimensionType(dimLoc.toString());
+            ignisEntity.setHomePos(GlobalPos.of(serverLevel.dimension(), BlockPos.ZERO));
         }
         if (mob instanceof Ender_Guardian_Entity enderGuardianEntity) {
             enderGuardianEntity.setUsedMassDestruction(false);
-            enderGuardianEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            enderGuardianEntity.setDimensionType(dimLoc.toString());
+            enderGuardianEntity.setHomePos(GlobalPos.of(serverLevel.dimension(), BlockPos.ZERO));
         }
         if (mob instanceof Netherite_Monstrosity_Entity netheriteMonstrosityEntity) {
+            netheriteMonstrosityEntity.setHomePos(GlobalPos.of(netheriteMonstrosityEntity.level().dimension(), BlockPos.ZERO));
             netheriteMonstrosityEntity.setIsAwaken(true);
-            netheriteMonstrosityEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            netheriteMonstrosityEntity.setDimensionType(dimLoc.toString());
         }
         if (mob instanceof Scylla_Entity scyllaEntity) {
-            scyllaEntity.setHomePos(BlockPos.ZERO);
-            ResourceLocation dimLoc = serverLevel.dimension().location();
-            scyllaEntity.setDimensionType(dimLoc.toString());
+            scyllaEntity.setHomePos(GlobalPos.of(scyllaEntity.level().dimension(), BlockPos.ZERO));
+            scyllaEntity.setAct(true);
+            scyllaEntity.heal(scyllaEntity.getMaxHealth());
         }
     }
 }
